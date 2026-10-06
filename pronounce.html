@@ -1,0 +1,491 @@
+<title>单词发音台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Charis+SIL:ital,wght@0,400;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one centered column — lookup bar, a "specimen card" for the word, then controls, samples and history. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #141c2e;
+  --muted: #5d6679;
+  --line: #d6dce6;
+  --us: #2f45c8;
+  --us-soft: #e3e7fb;
+  --uk: #b4471f;
+  --uk-soft: #f8e6dd;
+  --font-display: "Bricolage Grotesque", "Noto Sans SC", system-ui, sans-serif;
+  --font-body: "Noto Sans SC", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-ipa: "Charis SIL", "Doulos SIL", "Gentium Plus", "Lucida Sans Unicode", "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1420; --surface: #181f2e; --ink: #e7ebf3; --muted: #9aa3b6; --line: #2a3346;
+    --us: #8c9dff; --us-soft: #232c52; --uk: #f0956d; --uk-soft: #3e2a22; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1420; --surface: #181f2e; --ink: #e7ebf3; --muted: #9aa3b6; --line: #2a3346;
+  --us: #8c9dff; --us-soft: #232c52; --uk: #f0956d; --uk-soft: #3e2a22; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: flex; flex-direction: column; gap: 22px; }
+
+header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+h1 span { font-family: var(--font-ipa); font-weight: 400; color: var(--muted); font-size: 1.1rem; margin-left: 8px; }
+.sub { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+form.lookup { display: flex; gap: 8px; }
+#q { flex: 1; min-width: 0; font: 500 1.15rem var(--font-body); padding: 12px 16px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+#q:focus { outline: none; border-color: var(--us); box-shadow: 0 0 0 3px var(--us-soft); }
+button { font: inherit; cursor: pointer; }
+.go { font-weight: 700; padding: 0 20px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); }
+.go:hover { opacity: .88; }
+button:focus-visible, a:focus-visible, select:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--us); outline-offset: 2px; }
+
+/* Specimen card */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.word-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+#word { font-family: var(--font-ipa); font-weight: 700; font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.1; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+#word.sentence { font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: 400; line-height: 1.6; }
+#word .w { cursor: pointer; border-radius: 4px; padding: 0 1px; transition: background .12s; }
+#word .w:hover { background: var(--us-soft); }
+#word .w.on { background: var(--us); color: var(--surface); }
+#meaning { color: var(--muted); font-size: 0.95rem; }
+canvas#wave { width: 120px; height: 40px; flex: none; }
+
+.accents { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.acc { border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.acc.us { background: var(--us-soft); --c: var(--us); }
+.acc.uk { background: var(--uk-soft); --c: var(--uk); }
+.acc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--c); text-transform: uppercase; }
+.ipa { font-family: var(--font-ipa); font-size: 1.35rem; color: var(--ink); overflow-wrap: anywhere; }
+.ipa.none { font-family: var(--font-body); font-size: 0.85rem; color: var(--muted); }
+.acc-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.play { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--c); background: transparent; color: var(--c); border-radius: 999px; padding: 5px 14px; font-weight: 500; font-size: 0.88rem; }
+.play.main { background: var(--c); color: var(--surface); }
+.play:hover { filter: brightness(1.08); }
+.play svg { width: 14px; height: 14px; fill: currentColor; }
+
+.tip { margin: 0; padding: 12px 14px; border-left: 3px solid var(--ink); background: var(--bg); border-radius: 0 8px 8px 0; font-size: 0.92rem; }
+.tip b { font-weight: 700; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 6px 12px; font-size: 0.88rem; }
+.tool:hover { border-color: var(--muted); }
+.tool.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--muted); }
+.links a { color: var(--us); text-decoration: none; border-bottom: 1px solid currentColor; }
+
+/* Settings */
+details.settings { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px; }
+details.settings summary { cursor: pointer; padding-block: 10px; font-weight: 500; }
+.set-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 16px; align-items: center; padding-block: 6px 16px; }
+.set-grid label { font-size: 0.88rem; color: var(--muted); }
+.set-grid select { width: 100%; min-width: 0; font: inherit; font-size: 0.88rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.rate-row { display: flex; align-items: center; gap: 10px; }
+.rate-row input { flex: 1; min-width: 0; accent-color: var(--us); }
+.rate-row output { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; font-size: 0.88rem; }
+#voiceNote { grid-column: 1 / -1; font-size: 0.82rem; color: var(--uk); margin: 0; }
+
+section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+section h2 small { font-family: var(--font-body); font-weight: 400; font-size: 0.8rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 13px; font-family: var(--font-ipa); font-size: 1rem; }
+.chip:hover { border-color: var(--us); color: var(--us); }
+.empty { color: var(--muted); font-size: 0.88rem; margin: 0; }
+.clear { border: 0; background: none; color: var(--muted); font-size: 0.8rem; text-decoration: underline; padding: 0; }
+
+footer { color: var(--muted); font-size: 0.8rem; }
+
+@media (max-width: 520px) {
+  .accents { grid-template-columns: 1fr; }
+  .card { padding: 18px; }
+  canvas#wave { width: 84px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>单词发音台 <span>/prəˌnʌnsiˈeɪʃn/</span></h1>
+    <p class="sub">输入单词或句子，听美式和英式发音</p>
+  </header>
+
+  <form class="lookup" id="form" autocomplete="off">
+    <input id="q" type="text" placeholder="输入英文单词，例如 comfortable" aria-label="英文单词或句子" spellcheck="false">
+    <button class="go" type="submit">发音</button>
+  </form>
+
+  <article class="card" aria-live="polite">
+    <div class="word-row">
+      <div style="min-width:0">
+        <h2 id="word">comfortable</h2>
+        <div id="meaning"></div>
+      </div>
+      <canvas id="wave" width="240" height="80" aria-hidden="true"></canvas>
+    </div>
+
+    <div class="accents">
+      <div class="acc us">
+        <div class="acc-head"><span class="tag">美式 US</span></div>
+        <div class="ipa" id="ipaUS"></div>
+        <div class="acc-btns">
+          <button class="play main" data-acc="us" data-rate="normal" type="button"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>播放</button>
+          <button class="play" data-acc="us" data-rate="slow" type="button">慢速</button>
+        </div>
+      </div>
+      <div class="acc uk">
+        <div class="acc-head"><span class="tag">英式 UK</span></div>
+        <div class="ipa" id="ipaUK"></div>
+        <div class="acc-btns">
+          <button class="play main" data-acc="uk" data-rate="normal" type="button"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>播放</button>
+          <button class="play" data-acc="uk" data-rate="slow" type="button">慢速</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="tip" id="tip" hidden></p>
+
+    <div class="tools">
+      <button class="tool" id="repeatBtn" type="button">跟读 ×3</button>
+      <button class="tool" id="spellBtn" type="button">逐个字母拼读</button>
+      <button class="tool" id="stopBtn" type="button">停止</button>
+    </div>
+
+    <div class="links" id="links"></div>
+  </article>
+
+  <details class="settings" id="settings">
+    <summary>声音与语速设置</summary>
+    <div class="set-grid">
+      <label for="voiceUS">美式声音</label><select id="voiceUS"></select>
+      <label for="voiceUK">英式声音</label><select id="voiceUK"></select>
+      <label for="rate">正常语速</label>
+      <div class="rate-row"><input id="rate" type="range" min="0.5" max="1.3" step="0.05" value="0.9"><output id="rateOut">0.90×</output></div>
+      <p id="voiceNote" hidden></p>
+    </div>
+  </details>
+
+  <section>
+    <h2>容易读错的词 <small>点一下就能听</small></h2>
+    <div class="chips" id="samples"></div>
+  </section>
+
+  <section>
+    <h2>最近查过 <button class="clear" id="clearHist" type="button">清空</button></h2>
+    <div class="chips" id="history"></div>
+  </section>
+
+  <footer>声音来自你设备上的语音引擎，不同手机和电脑的音色会不一样。内置音标覆盖常见易错词，其他词可点“剑桥词典”查看音标，或点 YouGlish 听真人视频里的读法。</footer>
+</div>
+
+<script>
+// Built-in dictionary: [US IPA, UK IPA, 中文释义, 发音提示]
+const DICT = {
+  comfortable: ["ˈkʌmf.tɚ.bəl", "ˈkʌmf.tə.bəl", "舒适的", "通常只读三个音节：<b>COMF-ter-bul</b>，中间的 \"or\" 几乎不发音。"],
+  wednesday: ["ˈwenz.deɪ", "ˈwenz.deɪ", "星期三", "第一个 <b>d</b> 和第二个 <b>e</b> 都不发音，读作 WENZ-day。"],
+  colonel: ["ˈkɝː.nəl", "ˈkɜː.nəl", "上校", "拼写和读音完全对不上，读音和 <b>kernel</b> 一样。"],
+  quinoa: ["ˈkiːn.wɑː", "ˈkiːn.wɑː", "藜麦", "读作 KEEN-wah，不是 \"kwi-no-a\"。"],
+  epitome: ["ɪˈpɪt̬.ə.mi", "ɪˈpɪt.ə.mi", "缩影，典型", "四个音节，结尾读 <b>-tuh-mee</b>，不是 \"epi-tome\"。"],
+  genre: ["ˈʒɑːn.rə", "ˈʒɒn.rə", "类型，体裁", "开头是 <b>ʒ</b>（像 measure 里的 s），源自法语。"],
+  subtle: ["ˈsʌt̬.əl", "ˈsʌt.əl", "微妙的", "<b>b</b> 不发音，读作 SUT-ul。"],
+  receipt: ["rɪˈsiːt", "rɪˈsiːt", "收据", "<b>p</b> 不发音。"],
+  island: ["ˈaɪ.lənd", "ˈaɪ.lənd", "岛", "<b>s</b> 不发音。"],
+  february: ["ˈfeb.ru.er.i", "ˈfeb.ru.ər.i", "二月", "很多母语者也读成 FEB-yoo-er-ee，两种都能接受。"],
+  debris: ["dəˈbriː", "ˈdeb.riː", "碎片", "结尾 <b>s</b> 不发音；美式重音在后，英式重音在前。"],
+  pronunciation: ["prəˌnʌn.siˈeɪ.ʃən", "prəˌnʌn.siˈeɪ.ʃən", "发音", "第二个音节是 <b>nun</b>，不是 pronounce 里的 noun。"],
+  schedule: ["ˈskedʒ.uːl", "ˈʃedʒ.uːl", "日程", "美式开头是 <b>sk</b>，英式常读 <b>sh</b>。"],
+  vegetable: ["ˈvedʒ.tə.bəl", "ˈvedʒ.tə.bəl", "蔬菜", "通常读三个音节：VEJ-tuh-bul。"],
+  chaos: ["ˈkeɪ.ɑːs", "ˈkeɪ.ɒs", "混乱", "<b>ch</b> 读 k，读作 KAY-oss。"],
+  queue: ["kjuː", "kjuː", "排队", "后面四个字母 ueue 全都不单独发音，和字母 Q 同音。"],
+  tomato: ["təˈmeɪ.t̬oʊ", "təˈmɑː.təʊ", "番茄", "经典的美英差异：美式 may，英式 mah。"],
+  water: ["ˈwɑː.t̬ɚ", "ˈwɔː.tə", "水", "美式的 t 常闪音化，听起来像 WAH-der；英式不卷舌。"],
+  either: ["ˈiː.ðɚ", "ˈaɪ.ðə", "任一", "EE-ther 和 EYE-ther 都对，美式多用前者。"],
+  data: ["ˈdeɪ.t̬ə", "ˈdeɪ.tə", "数据", "DAY-tuh 最常见，DAH-tuh 也有人用。"],
+  often: ["ˈɑːf.ən", "ˈɒf.ən", "经常", "<b>t</b> 一般不发音，读 t 的也有，但较少。"],
+  recipe: ["ˈres.ə.pi", "ˈres.ɪ.pi", "食谱", "三个音节，结尾的 e 要读出来：RES-uh-pee。"],
+  hyperbole: ["haɪˈpɝː.bəl.i", "haɪˈpɜː.bəl.i", "夸张", "四个音节，结尾读 <b>-buh-lee</b>，不是 hyper-bowl。"],
+  mischievous: ["ˈmɪs.tʃə.vəs", "ˈmɪs.tʃɪ.vəs", "淘气的", "三个音节，没有 \"-ee-us\"，不要读成 mis-CHEE-vee-us。"],
+  almond: ["ˈɑː.mənd", "ˈɑː.mənd", "杏仁", "<b>l</b> 通常不发音。"],
+  salmon: ["ˈsæm.ən", "ˈsæm.ən", "三文鱼", "<b>l</b> 不发音，读作 SAM-un。"],
+  choir: ["kwaɪr", "kwaɪə", "合唱团", "读音和 quire 一样，开头是 kw。"],
+  suite: ["swiːt", "swiːt", "套房，套件", "和 sweet 同音，不读 suit。"],
+  sword: ["sɔːrd", "sɔːd", "剑", "<b>w</b> 不发音。"],
+  knowledge: ["ˈnɑː.lɪdʒ", "ˈnɒl.ɪdʒ", "知识", "<b>k</b> 不发音，第一个音节是 nol，不是 know。"],
+  iron: ["ˈaɪ.ɚn", "aɪən", "铁，熨斗", "r 的位置跟拼写相反，读作 EYE-ern。"],
+  clothes: ["kloʊðz", "kləʊðz", "衣服", "一个音节，口语里常和 close 读得一样。"],
+  asterisk: ["ˈæs.tɚ.ɪsk", "ˈæs.tər.ɪsk", "星号 *", "结尾是 <b>-risk</b>，不是 -rix。"],
+  espresso: ["esˈpres.oʊ", "esˈpres.əʊ", "浓缩咖啡", "没有 x，不是 expresso。"],
+  library: ["ˈlaɪ.brer.i", "ˈlaɪ.brər.i", "图书馆", "第一个 r 要读出来：LAI-brer-ee。"],
+  specific: ["spəˈsɪf.ɪk", "spəˈsɪf.ɪk", "具体的", "开头是 sp，不是 pacific。"],
+  develop: ["dɪˈvel.əp", "dɪˈvel.əp", "发展", "重音在第二个音节：di-VEL-up。"],
+  hotel: ["hoʊˈtel", "həʊˈtel", "酒店", "重音在后：ho-TEL。"],
+  photography: ["fəˈtɑː.ɡrə.fi", "fəˈtɒɡ.rə.fi", "摄影", "重音移到第二个音节，和 PHOtograph 不同。"],
+  determine: ["dɪˈtɝː.mɪn", "dɪˈtɜː.mɪn", "决定", "结尾读 <b>-min</b>，不是 -mine。"],
+  leisure: ["ˈliː.ʒɚ", "ˈleʒ.ə", "闲暇", "美式 LEE-zher，英式 LEZH-uh。"],
+  route: ["ruːt", "ruːt", "路线", "美式也常读 raut（和 out 押韵）。"],
+  aunt: ["ænt", "ɑːnt", "阿姨", "美式和 ant 同音，英式读 ahnt。"],
+  "can't": ["kænt", "kɑːnt", "不能", "美英差异明显；注意结尾的 t 很轻。"],
+  thames: ["temz", "temz", "泰晤士河", "<b>th</b> 读 t，<b>a</b> 读 e：TEMZ。"],
+  women: ["ˈwɪm.ɪn", "ˈwɪm.ɪn", "女人（复数）", "第一个音节读 wim，和单数 woman 不同。"],
+  busy: ["ˈbɪz.i", "ˈbɪz.i", "忙", "<b>u</b> 读 ɪ：BIZ-ee。"],
+  colleague: ["ˈkɑː.liːɡ", "ˈkɒl.iːɡ", "同事", "两个音节：KOL-eeg，结尾 ue 不发音。"],
+  vehicle: ["ˈviː.ə.kəl", "ˈviː.ɪ.kəl", "车辆", "<b>h</b> 通常不发音。"],
+  bury: ["ˈber.i", "ˈber.i", "埋葬", "和 berry 同音。"],
+  muscle: ["ˈmʌs.əl", "ˈmʌs.əl", "肌肉", "<b>c</b> 不发音，和 mussel 同音。"],
+  height: ["haɪt", "haɪt", "高度", "结尾是 t，不是 th。"],
+  architecture: ["ˈɑːr.kə.tek.tʃɚ", "ˈɑː.kɪ.tek.tʃə", "建筑", "<b>ch</b> 读 k。"],
+  hierarchy: ["ˈhaɪ.rɑːr.ki", "ˈhaɪə.rɑː.ki", "层级", "<b>ch</b> 读 k：HI-rar-kee。"],
+  entrepreneur: ["ˌɑːn.trə.prəˈnɝː", "ˌɒn.trə.prəˈnɜː", "企业家", "法语来源，重音在最后：on-truh-pruh-NUR。"],
+  anemone: ["əˈnem.ə.ni", "əˈnem.ə.ni", "海葵", "四个音节：uh-NEM-uh-nee。"],
+  worcestershire: ["ˈwʊs.tɚ.ʃɚ", "ˈwʊs.tə.ʃə", "伍斯特郡（酱）", "三个音节就够了：WUSS-ter-sher。"],
+  rural: ["ˈrʊr.əl", "ˈrʊə.rəl", "乡村的", "连续两个 r 音，慢慢读。"],
+  squirrel: ["ˈskwɝː.əl", "ˈskwɪr.əl", "松鼠", "美式接近一个半音节 SKWURL，英式 SKWIRR-ul。"],
+  world: ["wɝːld", "wɜːld", "世界", "r 和 l 连在一起，嘴型从卷舌滑到舌尖抵上齿龈。"],
+  three: ["θriː", "θriː", "三", "<b>th</b> 是咬舌音 θ，不是 s 或 f。"],
+  think: ["θɪŋk", "θɪŋk", "想", "<b>th</b> 是咬舌音 θ，不要读成 sink。"],
+  very: ["ˈver.i", "ˈver.i", "非常", "<b>v</b> 要上齿碰下唇，不要读成 w。"],
+  sheep: ["ʃiːp", "ʃiːp", "羊", "长音 iː，和 ship（短音 ɪ）区分。"],
+  ship: ["ʃɪp", "ʃɪp", "船", "短音 ɪ，和 sheep（长音 iː）区分。"]
+};
+const SAMPLES = ["comfortable","Wednesday","colonel","quinoa","epitome","genre","subtle","receipt","schedule","tomato","water","hierarchy","entrepreneur","squirrel","Worcestershire","think","sheep","ship"];
+
+const $ = (id) => document.getElementById(id);
+const synth = window.speechSynthesis;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+let current = "comfortable";
+let voices = [];
+let speakingTimer = null;
+
+// ---------- Voices ----------
+function scoreVoice(v) {
+  const n = v.name.toLowerCase();
+  let s = 0;
+  if (/natural|neural|premium|enhanced/.test(n)) s += 4;
+  if (/google/.test(n)) s += 3;
+  if (/samantha|daniel|serena|ava|allison|aria|jenny|guy|libby|sonia|ryan/.test(n)) s += 2;
+  if (v.localService) s += 1;
+  return s;
+}
+function fillVoices() {
+  voices = synth ? synth.getVoices().filter(v => /^en[-_]/i.test(v.lang) || v.lang === "en") : [];
+  const saved = store.get("pron-voices", {});
+  for (const [sel, region] of [[$("voiceUS"), "US"], [$("voiceUK"), "GB"]]) {
+    sel.innerHTML = "";
+    const regional = voices.filter(v => v.lang.replace("_", "-").toUpperCase().endsWith(region));
+    const rest = voices.filter(v => !regional.includes(v));
+    const ordered = [...regional.sort((a, b) => scoreVoice(b) - scoreVoice(a)), ...rest];
+    ordered.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v.voiceURI; o.textContent = `${v.name} (${v.lang})`;
+      sel.appendChild(o);
+    });
+    const key = region === "US" ? "us" : "uk";
+    if (saved[key] && ordered.some(v => v.voiceURI === saved[key])) sel.value = saved[key];
+  }
+  const note = $("voiceNote");
+  if (!synth) { note.textContent = "这个浏览器不支持语音合成，请换用 Chrome、Edge 或 Safari。"; note.hidden = false; }
+  else if (voices.length && !voices.some(v => /GB$/i.test(v.lang.replace("_", "-")))) {
+    note.textContent = "你的设备没有安装英式英语声音，英式按钮会用其他英语声音朗读。可以在系统的语音设置里添加“英语（英国）”声音。";
+    note.hidden = false;
+  } else note.hidden = true;
+}
+if (synth) { fillVoices(); synth.onvoiceschanged = fillVoices; }
+else fillVoices();
+
+["voiceUS", "voiceUK"].forEach(id => $(id).addEventListener("change", () => {
+  store.set("pron-voices", { us: $("voiceUS").value, uk: $("voiceUK").value });
+}));
+
+const rateEl = $("rate");
+rateEl.value = store.get("pron-rate", 0.9);
+const showRate = () => $("rateOut").textContent = Number(rateEl.value).toFixed(2) + "×";
+showRate();
+rateEl.addEventListener("input", () => { showRate(); store.set("pron-rate", Number(rateEl.value)); });
+
+// ---------- Speaking ----------
+function makeUtterance(text, acc, slow) {
+  const u = new SpeechSynthesisUtterance(text);
+  const sel = acc === "uk" ? $("voiceUK") : $("voiceUS");
+  const v = voices.find(x => x.voiceURI === sel.value);
+  if (v) u.voice = v;
+  u.lang = v ? v.lang : (acc === "uk" ? "en-GB" : "en-US");
+  u.rate = slow ? Math.max(0.45, Number(rateEl.value) * 0.6) : Number(rateEl.value);
+  u.onstart = () => waveOn(acc);
+  u.onend = u.onerror = () => { if (!synth.pending) waveOff(); clearWordMarks(); };
+  u.onboundary = (e) => markWordAt(e.charIndex);
+  return u;
+}
+function speak(text, acc = "us", slow = false) {
+  if (!synth || !text) return;
+  synth.cancel();
+  synth.speak(makeUtterance(text, acc, slow));
+}
+function repeatThree() {
+  if (!synth) return;
+  synth.cancel();
+  let i = 0;
+  const next = () => {
+    if (i >= 3) return;
+    const u = makeUtterance(current, i === 1 ? "uk" : "us", false);
+    i++;
+    const end = u.onend;
+    u.onend = () => { end(); speakingTimer = setTimeout(next, 1800); };
+    synth.speak(u);
+  };
+  next();
+}
+function spell() {
+  if (!synth) return;
+  const letters = current.replace(/[^a-zA-Z' ]/g, "").split("").map(c => c === " " ? "space" : c === "'" ? "apostrophe" : c.toUpperCase());
+  synth.cancel();
+  const u = makeUtterance(letters.join(", "), "us", false);
+  u.rate = 0.75;
+  u.onboundary = null;
+  synth.speak(u);
+}
+function stopAll() { clearTimeout(speakingTimer); if (synth) synth.cancel(); waveOff(); clearWordMarks(); }
+
+// ---------- Word card ----------
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+let wordSpans = [];
+function show(text) {
+  text = text.trim().replace(/\s+/g, " ");
+  if (!text) return;
+  current = text;
+  const key = text.toLowerCase().replace(/[’]/g, "'");
+  const entry = DICT[key];
+  const isSentence = /\s/.test(text);
+  const w = $("word");
+  w.classList.toggle("sentence", isSentence);
+  wordSpans = [];
+  if (isSentence) {
+    w.innerHTML = "";
+    const re = /\S+/g; let m, last = 0;
+    while ((m = re.exec(text))) {
+      w.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const s = document.createElement("span");
+      s.className = "w"; s.textContent = m[0]; s.dataset.start = m.index; s.title = "点一下单独听这个词";
+      w.appendChild(s); wordSpans.push(s);
+      last = m.index + m[0].length;
+    }
+  } else {
+    w.textContent = text;
+  }
+  $("meaning").textContent = entry ? entry[2] : (isSentence ? "句子模式：朗读时会高亮当前单词，点任意单词可单独听" : "");
+  const setIpa = (el, ipa) => {
+    if (ipa) { el.textContent = "/" + ipa + "/"; el.classList.remove("none"); }
+    else { el.textContent = isSentence ? "句子不显示音标" : "内置词典没有这个词的音标，可以点下面的剑桥词典查看"; el.classList.add("none"); }
+  };
+  setIpa($("ipaUS"), entry && entry[0]);
+  setIpa($("ipaUK"), entry && entry[1]);
+  const tip = $("tip");
+  if (entry && entry[3]) { tip.innerHTML = "<b>注意：</b>" + entry[3]; tip.hidden = false; } else tip.hidden = true;
+
+  const q = encodeURIComponent(isSentence ? text : key);
+  const links = [];
+  if (!isSentence) {
+    links.push(`<a href="https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${q}" target="_blank" rel="noopener">剑桥词典</a>`);
+    links.push(`<a href="https://www.merriam-webster.com/dictionary/${q}" target="_blank" rel="noopener">韦氏词典</a>`);
+  }
+  links.push(`<a href="https://youglish.com/pronounce/${q}/english" target="_blank" rel="noopener">YouGlish 真人视频</a>`);
+  $("links").innerHTML = "更多：" + links.join("");
+}
+function markWordAt(idx) {
+  if (!wordSpans.length) return;
+  let hit = null;
+  for (const s of wordSpans) if (Number(s.dataset.start) <= idx) hit = s;
+  wordSpans.forEach(s => s.classList.toggle("on", s === hit));
+}
+function clearWordMarks() { wordSpans.forEach(s => s.classList.remove("on")); }
+$("word").addEventListener("click", (e) => {
+  const s = e.target.closest(".w");
+  if (s) speak(s.textContent.replace(/^[^\w']+|[^\w']+$/g, ""), "us");
+});
+
+// ---------- History & samples ----------
+function chip(text) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = text;
+  b.addEventListener("click", () => { $("q").value = text; lookup(text); });
+  return b;
+}
+function renderHistory() {
+  const h = store.get("pron-history", []);
+  const box = $("history");
+  box.innerHTML = "";
+  if (!h.length) { box.innerHTML = '<p class="empty">还没有记录。查过的词会出现在这里，方便反复听。</p>'; $("clearHist").hidden = true; return; }
+  $("clearHist").hidden = false;
+  h.forEach(t => box.appendChild(chip(t)));
+}
+function addHistory(t) {
+  let h = store.get("pron-history", []).filter(x => x.toLowerCase() !== t.toLowerCase());
+  h.unshift(t); h = h.slice(0, 24);
+  store.set("pron-history", h); renderHistory();
+}
+$("clearHist").addEventListener("click", () => { store.set("pron-history", []); renderHistory(); });
+SAMPLES.forEach(s => $("samples").appendChild(chip(s)));
+
+function lookup(text, say = true) {
+  text = text.trim();
+  if (!text) return;
+  stopAll();
+  show(text);
+  addHistory(text);
+  if (say) speak(current, "us");
+}
+
+// ---------- Events ----------
+$("form").addEventListener("submit", (e) => { e.preventDefault(); lookup($("q").value); });
+document.querySelectorAll(".play").forEach(b => b.addEventListener("click", () => {
+  clearTimeout(speakingTimer);
+  speak(current, b.dataset.acc, b.dataset.rate === "slow");
+}));
+$("repeatBtn").addEventListener("click", repeatThree);
+$("spellBtn").addEventListener("click", spell);
+$("stopBtn").addEventListener("click", stopAll);
+
+// ---------- Waveform ----------
+const cv = $("wave"), ctx = cv.getContext("2d");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let waveColor = null, raf = null, t0 = 0;
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawWave(active) {
+  const W = cv.width, H = cv.height, bars = 18, gap = 4, bw = (W - gap * (bars - 1)) / bars;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = active ? waveColor : cssVar("--line");
+  const t = (performance.now() - t0) / 1000;
+  for (let i = 0; i < bars; i++) {
+    let h;
+    if (active && !reduce) {
+      const env = Math.sin(Math.PI * (i + 0.5) / bars);
+      h = (0.25 + 0.75 * Math.abs(Math.sin(t * 7 + i * 0.9) * Math.cos(t * 3.3 + i * 0.4))) * env * H;
+    } else {
+      h = (0.15 + 0.35 * Math.sin(Math.PI * (i + 0.5) / bars)) * H;
+    }
+    h = Math.max(6, h);
+    const x = i * (bw + gap), y = (H - h) / 2;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, bw, h, bw / 2) : ctx.rect(x, y, bw, h); ctx.fill();
+  }
+  if (active && !reduce) raf = requestAnimationFrame(() => drawWave(true));
+}
+function waveOn(acc) { cancelAnimationFrame(raf); waveColor = cssVar(acc === "uk" ? "--uk" : "--us"); t0 = performance.now(); drawWave(true); }
+function waveOff() { cancelAnimationFrame(raf); drawWave(false); }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => drawWave(false));
+new MutationObserver(() => drawWave(false)).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+// ---------- Start ----------
+show("comfortable");
+renderHistory();
+drawWave(false);
+$("q").focus({ preventScroll: true });
+</script>
