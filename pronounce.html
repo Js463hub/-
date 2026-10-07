@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>单词发音台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +38,15 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; marg
 h1 span { font-family: var(--font-ipa); font-weight: 400; color: var(--muted); font-size: 1.1rem; margin-left: 8px; }
 .sub { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
-form.lookup { display: flex; gap: 8px; }
+form.lookup { display: flex; gap: 8px; position: relative; }
+.qbox { flex: 1; min-width: 0; position: relative; display: flex; }
+#sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(20, 28, 46, .12); }
+#sugg li { display: flex; gap: 10px; align-items: baseline; padding: 7px 10px; border-radius: 6px; cursor: pointer; min-width: 0; }
+#sugg li.sel, #sugg li:hover { background: var(--us-soft); }
+#sugg .sw { font-family: var(--font-ipa); font-weight: 700; flex: none; }
+#sugg .sd { color: var(--muted); font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#status { font-size: 0.82rem; color: var(--muted); margin: -12px 0 0; }
+#status.err { color: var(--uk); }
 #q { flex: 1; min-width: 0; font: 500 1.15rem var(--font-body); padding: 12px 16px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
 #q:focus { outline: none; border-color: var(--us); box-shadow: 0 0 0 3px var(--us-soft); }
 button { font: inherit; cursor: pointer; }
@@ -53,7 +62,18 @@ button:focus-visible, a:focus-visible, select:focus-visible, input[type=range]:f
 #word .w { cursor: pointer; border-radius: 4px; padding: 0 1px; transition: background .12s; }
 #word .w:hover { background: var(--us-soft); }
 #word .w.on { background: var(--us); color: var(--surface); }
-#meaning { color: var(--muted); font-size: 0.95rem; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--muted); }
+.meta .exam { border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; color: var(--ink); }
+.meta .rank { font-variant-numeric: tabular-nums; margin-left: 4px; }
+.meta .lemma { color: var(--ink); }
+.meta .lemma button, .forms button { border: 0; background: none; padding: 0; color: var(--us); font-family: var(--font-ipa); font-weight: 700; font-size: 0.95rem; border-bottom: 1px dashed currentColor; }
+#meaning { display: flex; flex-direction: column; gap: 4px; font-size: 0.95rem; }
+#meaning .def { display: flex; gap: 8px; align-items: baseline; }
+#meaning .pos { flex: none; font-family: var(--font-ipa); font-style: italic; color: var(--muted); min-width: 2.6em; }
+#meaning .def span:last-child { min-width: 0; }
+#meaning .note { color: var(--muted); font-size: 0.88rem; }
+.forms { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; color: var(--muted); }
+.forms span { display: inline-flex; gap: 6px; align-items: baseline; }
 canvas#wave { width: 120px; height: 40px; flex: none; }
 
 .accents { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -117,18 +137,21 @@ footer { color: var(--muted); font-size: 0.8rem; }
   </header>
 
   <form class="lookup" id="form" autocomplete="off">
-    <input id="q" type="text" placeholder="输入英文单词，例如 comfortable" aria-label="英文单词或句子" spellcheck="false">
+    <div class="qbox">
+      <input id="q" type="text" placeholder="输入英文单词，例如 comfortable" aria-label="英文单词或句子" spellcheck="false" autocapitalize="off" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
+      <ul id="sugg" role="listbox" hidden></ul>
+    </div>
     <button class="go" type="submit">发音</button>
   </form>
+  <p id="status">词典加载中…</p>
 
   <article class="card" aria-live="polite">
     <div class="word-row">
-      <div style="min-width:0">
-        <h2 id="word">comfortable</h2>
-        <div id="meaning"></div>
-      </div>
+      <h2 id="word">comfortable</h2>
       <canvas id="wave" width="240" height="80" aria-hidden="true"></canvas>
     </div>
+    <div class="meta" id="meta" hidden></div>
+    <div id="meaning"></div>
 
     <div class="accents">
       <div class="acc us">
@@ -150,6 +173,8 @@ footer { color: var(--muted); font-size: 0.8rem; }
     </div>
 
     <p class="tip" id="tip" hidden></p>
+
+    <div class="forms" id="forms" hidden></div>
 
     <div class="tools">
       <button class="tool" id="repeatBtn" type="button">跟读 ×3</button>
@@ -181,7 +206,7 @@ footer { color: var(--muted); font-size: 0.8rem; }
     <div class="chips" id="history"></div>
   </section>
 
-  <footer>声音来自你设备上的语音引擎，不同手机和电脑的音色会不一样。内置音标覆盖常见易错词，其他词可点“剑桥词典”查看音标，或点 YouGlish 听真人视频里的读法。</footer>
+  <footer>声音来自你设备上的语音引擎，不同手机和电脑的音色会不一样。离线词典收录约 3.7 万个常用词：美式音标来自 CMU Pronouncing Dictionary，英式音标来自 Britfone 和 ECDICT，中文释义来自 ECDICT。查不到的词可以点剑桥词典链接查看。</footer>
 </div>
 
 <script>
@@ -355,15 +380,73 @@ function spell() {
 }
 function stopAll() { clearTimeout(speakingTimer); if (synth) synth.cancel(); waveOff(); clearWordMarks(); }
 
+// ---------- Offline dictionary (dict.json) ----------
+// words[key] = [usIPA, ukIPA, 中文释义, 考试标签, 词形变化, 词频排名, (原始大小写)]
+// forms[key] = [原形, usIPA, ukIPA]
+let LEX = null, KEYS = [];
+const EXAMS = ["中考", "高考", "四级", "六级", "考研", "雅思", "托福", "GRE"];
+const FORM_NAMES = { p: "过去式", d: "过去分词", i: "现在分词", "3": "第三人称单数", s: "复数", r: "比较级", t: "最高级" };
+async function loadLexicon() {
+  const st = $("status");
+  try {
+    const res = await fetch("dict.json");
+    if (!res.ok) throw new Error(res.status);
+    LEX = await res.json();
+    KEYS = Object.keys(LEX.words).sort();
+    st.textContent = `离线词典已就绪：${KEYS.length.toLocaleString()} 个常用词，输入时会提示单词`;
+    st.classList.remove("err");
+    show(current);
+  } catch (e) {
+    st.textContent = "词典文件没有加载成功，现在只能发音，只有少量易错词有音标。如果是直接双击打开的文件，请通过网页服务器打开。";
+    st.classList.add("err");
+  }
+}
+function entryFor(key) {
+  if (!LEX) return null;
+  const w = LEX.words[key];
+  if (w) return { key, us: w[0], uk: w[1], cn: w[2], tags: w[3], ex: w[4], rank: w[5], display: w[6] || key };
+  const f = LEX.forms[key];
+  if (f) {
+    const base = entryFor(f[0]);
+    return { key, us: f[1], uk: f[2], lemma: f[0], base, display: key };
+  }
+  return null;
+}
+function normKey(t) { return t.toLowerCase().replace(/[’‘]/g, "'"); }
+
 // ---------- Word card ----------
 function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function wordBtn(w) { return `<button type="button" data-go="${esc(w)}">${esc(w)}</button>`; }
+function renderDefs(cn) {
+  return cn.split("\n").map(line => {
+    const m = line.match(/^([a-z]+\.|\[[^\]]+\])\s*(.*)$/);
+    return m ? `<div class="def"><span class="pos">${esc(m[1])}</span><span>${esc(m[2])}</span></div>`
+             : `<div class="def"><span>${esc(line)}</span></div>`;
+  }).join("");
+}
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function didYouMean(key) {
+  if (!LEX || key.length < 3) return [];
+  return KEYS.filter(k => k[0] === key[0] && Math.abs(k.length - key.length) <= 2)
+    .map(k => [k, lev(k, key)]).filter(([, d]) => d <= 2)
+    .sort((a, b) => a[1] - b[1] || LEX.words[a[0]][5] - LEX.words[b[0]][5]).slice(0, 5).map(([k]) => k);
+}
+
 let wordSpans = [];
 function show(text) {
   text = text.trim().replace(/\s+/g, " ");
   if (!text) return;
   current = text;
-  const key = text.toLowerCase().replace(/[’]/g, "'");
-  const entry = DICT[key];
+  const key = normKey(text);
+  const tipEntry = DICT[key];
+  const entry = entryFor(key);
   const isSentence = /\s/.test(text);
   const w = $("word");
   w.classList.toggle("sentence", isSentence);
@@ -379,17 +462,55 @@ function show(text) {
       last = m.index + m[0].length;
     }
   } else {
-    w.textContent = text;
+    w.textContent = entry && entry.display !== key && text === key ? entry.display : text;
   }
-  $("meaning").textContent = entry ? entry[2] : (isSentence ? "句子模式：朗读时会高亮当前单词，点任意单词可单独听" : "");
+
+  // Exam tags, frequency, lemma note
+  const meta = $("meta");
+  const metaParts = [];
+  const src = entry && (entry.base || entry);
+  if (entry && entry.lemma) {
+    const kind = (entry.base && entry.base.ex || "").split("/").find(p => p.slice(2).split(",").includes(key));
+    metaParts.push(`<span class="lemma">${esc(key)} 是 ${wordBtn(entry.lemma)} 的${kind ? FORM_NAMES[kind[0]] || "变形" : "变形"}</span>`);
+  }
+  if (src && src.tags) src.tags.split(" ").forEach(i => metaParts.push(`<span class="exam">${EXAMS[i]}</span>`));
+  if (src && src.rank && src.rank < 99999) metaParts.push(`<span class="rank">词频第 ${src.rank.toLocaleString()} 位</span>`);
+  meta.innerHTML = metaParts.join("");
+  meta.hidden = !metaParts.length || isSentence;
+
+  // Meaning
+  const mean = $("meaning");
+  if (isSentence) mean.innerHTML = `<div class="note">句子模式：朗读时会高亮当前单词，点任意单词可单独听</div>`;
+  else if (src && src.cn) mean.innerHTML = renderDefs(src.cn);
+  else if (tipEntry) mean.innerHTML = `<div class="def"><span>${esc(tipEntry[2])}</span></div>`;
+  else if (LEX) {
+    const alts = didYouMean(key);
+    mean.innerHTML = `<div class="note">离线词典里没有找到这个词，仍然可以播放发音。${alts.length ? "你是不是要找：" + alts.map(wordBtn).join("　") : ""}</div>`;
+  } else mean.innerHTML = "";
+
+  // IPA: curated entries win, then the dictionary
   const setIpa = (el, ipa) => {
-    if (ipa) { el.textContent = "/" + ipa + "/"; el.classList.remove("none"); }
-    else { el.textContent = isSentence ? "句子不显示音标" : "内置词典没有这个词的音标，可以点下面的剑桥词典查看"; el.classList.add("none"); }
+    if (ipa) { el.textContent = ipa.split(" · ").map(x => "/" + x + "/").join("  "); el.classList.remove("none"); }
+    else { el.textContent = isSentence ? "句子不显示音标" : "词典里没有这个口音的音标，可以点下面的剑桥词典查看"; el.classList.add("none"); }
   };
-  setIpa($("ipaUS"), entry && entry[0]);
-  setIpa($("ipaUK"), entry && entry[1]);
+  setIpa($("ipaUS"), isSentence ? "" : (tipEntry && tipEntry[0]) || (entry && entry.us));
+  setIpa($("ipaUK"), isSentence ? "" : (tipEntry && tipEntry[1]) || (entry && entry.uk));
   const tip = $("tip");
-  if (entry && entry[3]) { tip.innerHTML = "<b>注意：</b>" + entry[3]; tip.hidden = false; } else tip.hidden = true;
+  if (tipEntry && tipEntry[3]) { tip.innerHTML = "<b>注意：</b>" + tipEntry[3]; tip.hidden = false; } else tip.hidden = true;
+
+  // Word forms
+  const forms = $("forms");
+  const ex = !isSentence && src && src.ex;
+  if (ex) {
+    const seen = new Set();
+    const order = "pdi3srt";
+    forms.innerHTML = ex.split("/").sort((x, y) => order.indexOf(x[0]) - order.indexOf(y[0])).map(p => {
+      const name = FORM_NAMES[p[0]], vals = p.slice(2).split(",").filter(v => v && !seen.has(p[0] + v));
+      vals.forEach(v => seen.add(p[0] + v));
+      return name && vals.length ? `<span>${name} ${vals.map(wordBtn).join(" ")}</span>` : "";
+    }).join("");
+    forms.hidden = !forms.innerHTML;
+  } else forms.hidden = true;
 
   const q = encodeURIComponent(isSentence ? text : key);
   const links = [];
@@ -400,6 +521,58 @@ function show(text) {
   links.push(`<a href="https://youglish.com/pronounce/${q}/english" target="_blank" rel="noopener">YouGlish 真人视频</a>`);
   $("links").innerHTML = "更多：" + links.join("");
 }
+document.querySelector(".card").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-go]");
+  if (b) { $("q").value = b.dataset.go; lookup(b.dataset.go); }
+});
+
+// ---------- Suggestions ----------
+let suggSel = -1;
+function lowerBound(arr, x) { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; arr[m] < x ? lo = m + 1 : hi = m; } return lo; }
+function updateSuggestions() {
+  const box = $("sugg"), q = normKey($("q").value.trim());
+  suggSel = -1;
+  if (!LEX || !q || /\s/.test(q)) { closeSugg(); return; }
+  const out = [];
+  for (let i = lowerBound(KEYS, q); i < KEYS.length && KEYS[i].startsWith(q) && out.length < 400; i++) out.push(KEYS[i]);
+  out.sort((a, b) => (a === q ? -1 : b === q ? 1 : LEX.words[a][5] - LEX.words[b][5]));
+  const top = out.slice(0, 8);
+  if (!top.length || (top.length === 1 && top[0] === q)) { closeSugg(); return; }
+  box.innerHTML = top.map((k, i) => {
+    const e = LEX.words[k];
+    const first = e[2].split("\n")[0].replace(/^[a-z]+\.\s*/, "");
+    return `<li role="option" id="sg${i}" data-k="${esc(k)}"><span class="sw">${esc(e[6] || k)}</span><span class="sd">${esc(first)}</span></li>`;
+  }).join("");
+  box.hidden = false;
+  $("q").setAttribute("aria-expanded", "true");
+}
+function closeSugg() { $("sugg").hidden = true; $("q").setAttribute("aria-expanded", "false"); $("q").removeAttribute("aria-activedescendant"); }
+function moveSugg(d) {
+  const items = [...$("sugg").children];
+  if ($("sugg").hidden || !items.length) return false;
+  suggSel = (suggSel + d + items.length) % items.length;
+  items.forEach((li, i) => li.classList.toggle("sel", i === suggSel));
+  $("q").setAttribute("aria-activedescendant", items[suggSel].id);
+  return true;
+}
+$("q").addEventListener("input", updateSuggestions);
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" && moveSugg(1)) e.preventDefault();
+  else if (e.key === "ArrowUp" && moveSugg(-1)) e.preventDefault();
+  else if (e.key === "Escape") closeSugg();
+  else if (e.key === "Enter" && suggSel >= 0 && !$("sugg").hidden) {
+    e.preventDefault();
+    const k = $("sugg").children[suggSel].dataset.k;
+    $("q").value = k; closeSugg(); lookup(k);
+  }
+});
+$("q").addEventListener("blur", () => setTimeout(closeSugg, 150));
+$("sugg").addEventListener("mousedown", (e) => {
+  const li = e.target.closest("li");
+  if (!li) return;
+  e.preventDefault();
+  $("q").value = li.dataset.k; closeSugg(); lookup(li.dataset.k);
+});
 function markWordAt(idx) {
   if (!wordSpans.length) return;
   let hit = null;
@@ -445,7 +618,7 @@ function lookup(text, say = true) {
 }
 
 // ---------- Events ----------
-$("form").addEventListener("submit", (e) => { e.preventDefault(); lookup($("q").value); });
+$("form").addEventListener("submit", (e) => { e.preventDefault(); closeSugg(); lookup($("q").value); });
 document.querySelectorAll(".play").forEach(b => b.addEventListener("click", () => {
   clearTimeout(speakingTimer);
   speak(current, b.dataset.acc, b.dataset.rate === "slow");
@@ -485,6 +658,7 @@ new MutationObserver(() => drawWave(false)).observe(document.documentElement, { 
 
 // ---------- Start ----------
 show("comfortable");
+loadLexicon();
 renderHistory();
 drawWave(false);
 $("q").focus({ preventScroll: true });
