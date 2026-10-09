@@ -79,6 +79,18 @@ button:focus-visible, a:focus-visible, select:focus-visible, input[type=range]:f
 #meaning .pos { flex: none; font-family: var(--font-ipa); font-style: italic; color: var(--muted); min-width: 2.6em; }
 #meaning .def span:last-child { min-width: 0; }
 #meaning .note { color: var(--muted); font-size: 0.88rem; }
+.card.zh .accents, .card.zh .tools, .card.zh .links { display: none; }
+.zh-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.zh-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.zh-go { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 0; background: none; color: var(--ink); padding: 10px 4px; border-radius: 6px; }
+.zh-go:hover { background: var(--us-soft); }
+.zh-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.zh-w { font-family: var(--font-ipa); font-weight: 700; font-size: 1.2rem; }
+.zh-i { font-family: var(--font-ipa); color: var(--muted); font-size: 0.95rem; }
+.zh-d { color: var(--muted); font-size: 0.88rem; overflow-wrap: anywhere; }
+.zh-d mark { background: var(--uk-soft); color: var(--ink); border-radius: 3px; padding: 0 2px; }
+.zh-say { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--us); background: transparent; color: var(--us); display: grid; place-items: center; }
+.zh-say svg { width: 13px; height: 13px; fill: currentColor; }
 .forms { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; color: var(--muted); }
 .forms span { display: inline-flex; gap: 6px; align-items: baseline; }
 canvas#wave { width: 120px; height: 40px; flex: none; }
@@ -140,12 +152,12 @@ footer { color: var(--muted); font-size: 0.8rem; }
 <div class="wrap">
   <header>
     <h1>单词发音台 <span>/prəˌnʌnsiˈeɪʃn/</span></h1>
-    <p class="sub">输入单词或句子，听美式和英式发音</p>
+    <p class="sub">输入英文听美式和英式发音，输入中文查英文单词</p>
   </header>
 
   <form class="lookup" id="form" autocomplete="off">
     <div class="qbox">
-      <input id="q" type="text" placeholder="输入英文单词，例如 comfortable" aria-label="英文单词或句子" spellcheck="false" autocapitalize="off" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
+      <input id="q" type="text" placeholder="输入英文或中文，例如 comfortable、舒服" aria-label="英文单词、句子或中文" spellcheck="false" autocapitalize="off" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
       <ul id="sugg" role="listbox" hidden></ul>
     </div>
     <button class="go" type="submit">发音</button>
@@ -446,10 +458,83 @@ function didYouMean(key) {
     .sort((a, b) => a[1] - b[1] || LEX.words[a[0]][5] - LEX.words[b[0]][5]).slice(0, 5).map(([k]) => k);
 }
 
+// ---------- 中文查英文 ----------
+const hasCJK = (t) => /[\u3400-\u9fff]/.test(t);
+let ZH = null;
+function zhIndex() {
+  if (ZH || !LEX) return ZH;
+  ZH = KEYS.map(k => {
+    const e = LEX.words[k];
+    const lines = e[2].split("\n");
+    const terms = [];
+    lines.forEach((line, li) => line.replace(/^([a-z]+\.|\[[^\]]+\])\s*/, "").replace(/[(（][^)）]*[)）]/g, "")
+      .split(/[,，;；、]/).forEach(t => { t = t.trim(); if (t) terms.push([t, li]); }));
+    return [k, terms, e[5] + (e[6] ? 50000 : 0)];  // 专有名词（大写开头）往后排
+  });
+  return ZH;
+}
+function zhSearch(q, limit = 40) {
+  const idx = zhIndex();
+  if (!idx) return [];
+  const hits = [];
+  for (const [k, terms, rank] of idx) {
+    let best = 9, line = 0;
+    for (const [t, li] of terms) {
+      let sc = 9;
+      if (t === q) sc = 0;
+      else if (t.replace(/[的地]$/, "") === q || t.replace(/^(使|被|有)/, "") === q) sc = 1;
+      else if (t.startsWith(q)) sc = 2;
+      else if (t.includes(q)) sc = 3;
+      if (sc < best) { best = sc; line = li; }
+    }
+    if (best < 9) hits.push([k, best, rank, line]);
+  }
+  hits.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
+  return hits.slice(0, limit);
+}
+const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>';
+function showZh(text) {
+  current = text;
+  const card = document.querySelector(".card");
+  card.classList.add("zh");
+  const w = $("word");
+  w.classList.remove("sentence");
+  w.textContent = text;
+  wordSpans = [];
+  $("tip").hidden = true;
+  $("forms").hidden = true;
+  const meta = $("meta"), mean = $("meaning");
+  if (!LEX) {
+    meta.hidden = true;
+    mean.innerHTML = `<div class="note">中文查英文需要离线词典，词典还在加载或者没有加载成功，请稍后再试。</div>`;
+    return;
+  }
+  const hits = zhSearch(text);
+  meta.innerHTML = `<span>${hits.length >= 40 ? "40+" : hits.length} 个英文词，常用的排在前面</span>`;
+  meta.hidden = !hits.length;
+  if (!hits.length) {
+    mean.innerHTML = `<div class="note">没有找到含有“${esc(text)}”的释义。试试更短的词，比如把“舒服的”换成“舒服”。</div>`;
+    return;
+  }
+  const re = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+  mean.innerHTML = `<div class="zh-list">` + hits.map(([k, , , li]) => {
+    const e = LEX.words[k];
+    const shown = e[6] || k;
+    const ipa = (e[0] || e[1] || "").split(" · ")[0];
+    const line = esc(e[2].split("\n")[li] || "").replace(re, m => `<mark>${m}</mark>`);
+    return `<div class="zh-row"><button type="button" class="zh-go" data-go="${esc(shown)}">` +
+      `<span class="zh-head"><span class="zh-w">${esc(shown)}</span>${ipa ? `<span class="zh-i">/${esc(ipa)}/</span>` : ""}</span>` +
+      `<span class="zh-d">${line}</span></button>` +
+      `<button type="button" class="zh-say" data-say="${esc(shown)}" aria-label="播放 ${esc(shown)} 的发音">${PLAY_ICON}</button></div>`;
+  }).join("") + `</div>`;
+}
+
 let wordSpans = [];
 function show(text) {
   text = text.trim().replace(/\s+/g, " ");
   if (!text) return;
+  if (hasCJK(text)) { showZh(text); return; }
+  document.querySelector(".card").classList.remove("zh");
   current = text;
   const key = normKey(text);
   const tipEntry = DICT[key];
@@ -529,6 +614,8 @@ function show(text) {
   $("links").innerHTML = "更多：" + links.join("");
 }
 document.querySelector(".card").addEventListener("click", (e) => {
+  const say = e.target.closest("button[data-say]");
+  if (say) { speak(say.dataset.say, "us"); return; }
   const b = e.target.closest("button[data-go]");
   if (b) { $("q").value = b.dataset.go; lookup(b.dataset.go); }
 });
@@ -539,7 +626,20 @@ function lowerBound(arr, x) { let lo = 0, hi = arr.length; while (lo < hi) { con
 function updateSuggestions() {
   const box = $("sugg"), q = normKey($("q").value.trim());
   suggSel = -1;
-  if (!LEX || !q || /\s/.test(q)) { closeSugg(); return; }
+  if (!LEX || !q) { closeSugg(); return; }
+  if (hasCJK(q)) {
+    const hits = zhSearch(q, 8);
+    if (!hits.length) { closeSugg(); return; }
+    box.innerHTML = hits.map(([k, , , li], i) => {
+      const e = LEX.words[k];
+      const line = (e[2].split("\n")[li] || "").replace(/^[a-z]+\.\s*/, "");
+      return `<li role="option" id="sg${i}" data-k="${esc(e[6] || k)}"><span class="sw">${esc(e[6] || k)}</span><span class="sd">${esc(line)}</span></li>`;
+    }).join("");
+    box.hidden = false;
+    $("q").setAttribute("aria-expanded", "true");
+    return;
+  }
+  if (/\s/.test(q)) { closeSugg(); return; }
   const out = [];
   for (let i = lowerBound(KEYS, q); i < KEYS.length && KEYS[i].startsWith(q) && out.length < 400; i++) out.push(KEYS[i]);
   out.sort((a, b) => (a === q ? -1 : b === q ? 1 : LEX.words[a][5] - LEX.words[b][5]));
@@ -621,7 +721,7 @@ function lookup(text, say = true) {
   stopAll();
   show(text);
   addHistory(text);
-  if (say) speak(current, "us");
+  if (say && !hasCJK(text)) speak(current, "us");
 }
 
 // ---------- Events ----------
