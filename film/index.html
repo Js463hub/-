@@ -67,6 +67,8 @@ h1 span { color: var(--accent); }
 .films { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 860px) { .films { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .films { grid-template-columns: 1fr 1fr; } }
+.film-group { grid-column: 1 / -1; font-size: 12px; color: var(--muted); padding-top: 6px; }
+.film-group:first-child { padding-top: 0; }
 .film { appearance: none; text-align: left; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: var(--r); padding: 0; overflow: hidden; display: grid; grid-template-rows: 6px auto; font: inherit; }
 .film .band { background: linear-gradient(90deg, var(--c1) 0 50%, var(--c2) 50% 100%); }
 .film .txt { padding: 7px 9px 8px; display: grid; gap: 1px; min-width: 0; }
@@ -95,7 +97,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
 <div class="wrap">
   <header>
     <h1>胶片<span>调色</span></h1>
-    <p class="sub">富士风格胶片模拟 · 照片只在你的设备上处理，不会上传</p>
+    <p class="sub">富士胶片模拟和流行滤镜 · 照片只在你的设备上处理，不会上传</p>
   </header>
 
   <div class="bench">
@@ -122,8 +124,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
       </div>
 
       <div class="group">
-        <div class="label">胶片模拟</div>
-        <div class="films" id="films" role="group" aria-label="胶片模拟"></div>
+        <div class="label">滤镜</div>
+        <div class="films" id="films" role="group" aria-label="滤镜"></div>
         <p class="desc" id="desc"></p>
       </div>
 
@@ -176,78 +178,113 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
   // ---------- Film recipes (approximations) ----------
   // hues: [centerHueDeg, hueShiftDeg, satMul, valMul]
   const FILMS = [
-    { id: "cozy", en: "Teal Neg", cn: "青调负片", c1: "#3f9bb0", c2: "#e0703a",
+    { group: "网络流行", id: "cozy", en: "Teal Neg", cn: "青调负片", c1: "#3f9bb0", c2: "#e0703a",
       desc: "天空转成青蓝色，绿叶偏黄绿，橙红更亮；黑位微微抬起、高光柔和发灰，像冲洗出来的彩色负片。风格接近 Hypic 的「舒适圣诞」。",
       sat: .95, curve: [[0,.04],[.1,.1],[.25,.3],[.5,.6],[.75,.83],[.9,.89],[1,.92]],
       hues: [[0,0,1.05,1],[28,-10,1.12,1.12],[55,-8,.85,1.05],[85,-14,.75,1.1],[130,-12,.8,1.02],[190,-4,1.08,.95],[222,-25,1.0,.9]],
       shadowTint: [.008,.008,-.008], highTint: [.004,.003,0], clarity: 35, grain: 1 },
-    { id: "party", en: "Deep Blue", cn: "深蓝鲜明", c1: "#2f5fd0", c2: "#e08a1e",
+    { group: "网络流行", id: "party", en: "Deep Blue", cn: "深蓝鲜明", c1: "#2f5fd0", c2: "#e08a1e",
       desc: "蓝色压深变浓、天空和蓝色物体更醒目，暗部压黑、反差大，高光和阴影都偏一点冷。风格接近 Hypic 的「今夜派对」。",
       sat: 1.08, curve: [[0,0],[.1,.05],[.3,.27],[.5,.5],[.75,.79],[.9,.935],[1,1]],
       hues: [[28,0,1.12,.95],[75,4,.95,1],[190,12,1.15,.97],[218,-2,1.2,.95]],
       shadowTint: [-.004,-.002,.01], highTint: [-.006,-.002,.012], clarity: 45, grain: 0 },
-    { id: "kodachrome", en: "Kodachrome 64", cn: "柯达克罗姆", c1: "#b3261e", c2: "#f2c230",
+    { group: "网络流行", id: "japan", en: "Airy", cn: "日系清新", c1: "#bfe3e0", c2: "#f4efe6",
+      desc: "明亮、低反差、低饱和，黑位抬起，绿色和蓝色偏青，肤色白净。适合是枝裕和那种日常、海边、植物和人像。",
+      wb: [.98,1,1.03], sat: .78, curve: [[0,.09],[.25,.36],[.5,.62],[.75,.83],[1,.97]],
+      hues: [[25,0,.85,1.06],[55,-4,.8,1.04],[105,18,.75,1.05],[215,-14,.85,1.05]],
+      shadowTint: [-.006,.006,.01], highTint: [-.002,.002,.004], clarity: 0, grain: 0 },
+    { group: "网络流行", id: "hk", en: "HK Retro", cn: "港风", c1: "#1f6b5c", c2: "#c43a2c",
+      desc: "王家卫电影式的港风：暖黄底色，红色浓烈，绿色偏青墨绿，反差明显带颗粒。夜晚街道、霓虹、人像都很合适。",
+      wb: [1.05,1.01,.9], sat: 1.12, curve: [[0,.025],[.2,.13],[.5,.48],[.8,.84],[1,.95]],
+      hues: [[0,0,1.25,.92],[30,-4,1.05,.98],[55,-8,.85,.95],[110,35,.9,.85],[190,0,.95,.9],[215,-15,.85,.9]],
+      shadowTint: [-.012,.012,.008], highTint: [.02,.012,-.02], clarity: 20, grain: 2, gsize: 2 },
+    { group: "网络流行", id: "cream", en: "Cream", cn: "奶油色", c1: "#efdcc4", c2: "#c9a98a",
+      desc: "整体奶白偏暖，饱和度低，绿色变成卡其和橄榄色，阴影柔和不发黑。适合咖啡店、穿搭、室内和静物。",
+      wb: [1.07,1.02,.9], sat: .74, curve: [[0,.07],[.25,.31],[.5,.57],[.75,.8],[1,.95]],
+      hues: [[0,-2,.85,1.04],[28,0,.95,1.06],[55,-10,.75,1.05],[100,-30,.55,1.05],[215,-8,.65,1.05]],
+      shadowTint: [.014,.008,-.004], highTint: [.018,.012,-.01], clarity: 0, grain: 0 },
+    { group: "网络流行", id: "blackgold", en: "Black Gold", cn: "黑金", c1: "#111111", c2: "#d9a53a",
+      desc: "只留下橙黄色的灯光，其余颜色几乎褪成黑白，暗部压黑。城市夜景、灯光街道专用。",
+      sat: 1, keep: { hue: 36, width: 14, lo: .06, hi: 1.25 }, curve: [[0,0],[.15,.07],[.4,.33],[.6,.58],[.85,.88],[1,1]],
+      hues: [[30,6,1.1,1.05],[50,-8,1.1,1.05]],
+      highTint: [.01,.004,-.008], clarity: 30, grain: 1 },
+    { group: "网络流行", id: "forest", en: "Forest", cn: "森系", c1: "#5b6e4a", c2: "#d8cfb0",
+      desc: "苔藓绿：绿色变深变柔、略偏黄，整体偏暖、饱和度收敛，柔和的光线感。适合公园、森林、植物和清新人像。",
+      wb: [1.02,1.02,.95], sat: .85, curve: [[0,.05],[.25,.27],[.5,.53],[.75,.78],[1,.95]],
+      hues: [[28,0,.9,1.04],[55,-6,.8,1],[95,-6,.75,.88],[130,-14,.7,.88],[215,-12,.7,1.02]],
+      shadowTint: [0,.008,0], highTint: [.012,.01,-.006], clarity: 10, grain: 1 },
+    { group: "网络流行", id: "cyber", en: "Cyberpunk", cn: "赛博朋克", c1: "#e0379b", c2: "#18b8d9",
+      desc: "红橙色转成洋红粉，蓝绿色转成青色，阴影带紫，反差强。拍夜晚的霓虹灯、城市和雨夜最出效果。",
+      wb: [.96,.95,1.08], sat: 1.15, curve: [[0,.02],[.2,.12],[.5,.48],[.8,.86],[1,1]],
+      hues: [[0,-28,1.3,1],[30,-45,1.2,.95],[55,-30,.7,.95],[110,60,1,.95],[190,0,1.3,1],[220,-20,1.2,1]],
+      shadowTint: [.014,-.008,.03], highTint: [.012,-.006,.01], halation: .3, clarity: 25, grain: 1 },
+    { group: "网络流行", id: "polaroid", en: "Polaroid", cn: "拍立得", c1: "#e9e2cf", c2: "#7cb3b0",
+      desc: "褪色的即时成像感：黑位发灰偏青，高光偏黄，反差低，颜色淡。配上暗角更像拍立得相纸。",
+      wb: [1.02,1,.97], sat: .82, curve: [[0,.1],[.25,.3],[.5,.53],[.75,.77],[1,.92]],
+      hues: [[0,0,.9,1],[55,-4,1,1.02],[110,10,.8,1],[215,-12,.8,1]],
+      shadowTint: [-.02,.012,.02], highTint: [.02,.016,-.02], clarity: 0, grain: 1 },
+    { group: "胶片配方", id: "kodachrome", en: "Kodachrome 64", cn: "柯达克罗姆", c1: "#b3261e", c2: "#f2c230",
       desc: "按 Fuji X Weekly 最热门配方换算：经典正片底，阴影 +2，白平衡 R+2 B-5。红色浓郁、蓝天深沉、反差硬朗，晴天扫街首选。",
       wb: [1.03,1,.94], sat: 1.0, curve: [[0,0],[.15,.09],[.35,.3],[.5,.49],[.75,.8],[.9,.93],[1,.99]],
       hues: [[0,0,1.15,.9],[30,-4,1.05,.95],[55,-4,1,.95],[100,-8,.85,.9],[215,-10,1.05,.85]],
       shadowTint: [.004,0,-.006], highTint: [.01,.006,-.01], clarity: 25, grain: 1 },
-    { id: "portra", en: "Portra 400", cn: "人像暖调", c1: "#e8b48a", c2: "#8fa3a8",
+    { group: "胶片配方", id: "portra", en: "Portra 400", cn: "人像暖调", c1: "#e8b48a", c2: "#8fa3a8",
       desc: "经典正片底，色彩 +2，白平衡 R+2 B-6。肤色温润，高光奶油感，绿色和蓝色收敛。拍人像和生活最好看。",
       wb: [1.05,1,.9], sat: .92, curve: [[0,.035],[.25,.26],[.5,.54],[.75,.79],[1,.96]],
       hues: [[0,4,.95,1],[25,-2,.95,1.06],[55,-6,.9,1.03],[100,-14,.75,1.02],[215,-10,.8,1]],
       shadowTint: [0,.002,.004], highTint: [.018,.009,-.008], clarity: 10, grain: 1 },
-    { id: "gold", en: "Gold 200", cn: "金色暖阳", c1: "#f0b323", c2: "#c0392b",
+    { group: "胶片配方", id: "gold", en: "Gold 200", cn: "金色暖阳", c1: "#f0b323", c2: "#c0392b",
       desc: "经典正片底，高光 -2、阴影 +1、色彩 +3，白平衡 R+4 B-5。整张照片泛着金黄色，像夏天傍晚。",
       wb: [1.05,1.01,.92], sat: 1.18, curve: [[0,.01],[.2,.15],[.5,.5],[.75,.78],[.9,.89],[1,.96]],
       hues: [[0,0,1.1,.97],[30,-2,1.15,1.03],[50,-4,1.2,1.05],[100,-14,.85,1],[215,-6,.95,.95]],
       highTint: [.015,.01,-.01], clarity: 15, grain: 1 },
-    { id: "cinestill", en: "CineStill 800T", cn: "夜景电影", c1: "#1f4e6b", c2: "#e2483a",
+    { group: "胶片配方", id: "cinestill", en: "CineStill 800T", cn: "夜景电影", c1: "#1f4e6b", c2: "#e2483a",
       desc: "影院底，荧光灯白平衡 R-6 B-4，高光 +3，强颗粒。整体偏冷带青，亮灯周围有红色光晕。夜景和霓虹灯最合适。",
       wb: [.92,1,1.08], sat: .85, curve: [[0,.05],[.25,.24],[.5,.5],[.75,.8],[.9,.95],[1,1]],
       hues: [[0,-4,1.1,1],[30,-8,1.05,1],[110,20,.7,.95],[190,0,1.1,1],[215,-14,1.1,1]],
       shadowTint: [-.015,.006,.02], highTint: [.01,0,-.005], halation: .7, clarity: 10, grain: 2, gsize: 2 },
-    { id: "superia", en: "Superia 400", cn: "富士日常", c1: "#2e8b57", c2: "#d6336c",
+    { group: "胶片配方", id: "superia", en: "Superia 400", cn: "富士日常", c1: "#2e8b57", c2: "#d6336c",
       desc: "富士自家的经典民用彩色负片。绿色鲜活，阴影带一点青绿，反差利落，日常随手拍的味道。",
       wb: [.99,1.02,1], sat: 1.1, curve: [[0,.02],[.2,.15],[.5,.5],[.8,.85],[1,.98]],
       hues: [[0,-6,1.05,.95],[25,0,.95,1.02],[110,-6,1.15,.95],[215,-12,1.05,.92]],
       shadowTint: [-.01,.01,.012], highTint: [.004,.006,-.008], clarity: 20, grain: 1 },
-    { id: "provia", en: "Provia", cn: "标准", c1: "#3b6fb6", c2: "#e9e6dc",
+    { group: "富士胶片模拟", id: "provia", en: "Provia", cn: "标准", c1: "#3b6fb6", c2: "#e9e6dc",
       desc: "通用标准色，忠实还原，对比和饱和度适中。日常什么都能拍。",
       sat: 1.08, curve: [[0,0],[.25,.225],[.5,.5],[.75,.775],[1,1]],
       hues: [[215,0,1.06,.97],[110,-4,1.05,1]], grain: 0 },
-    { id: "velvia", en: "Velvia", cn: "鲜艳", c1: "#2e8b57", c2: "#c8102e",
+    { group: "富士胶片模拟", id: "velvia", en: "Velvia", cn: "鲜艳", c1: "#2e8b57", c2: "#c8102e",
       desc: "高饱和高对比，蓝天更深、绿叶更浓。适合风光和花卉。",
       sat: 1.32, curve: [[0,0],[.25,.19],[.5,.5],[.75,.82],[1,1]],
       hues: [[0,0,1.12,.95],[55,0,1.08,1],[110,-6,1.2,.92],[215,4,1.2,.86]], grain: 0 },
-    { id: "astia", en: "Astia", cn: "柔和", c1: "#e4a9a0", c2: "#7aa7d6",
+    { group: "富士胶片模拟", id: "astia", en: "Astia", cn: "柔和", c1: "#e4a9a0", c2: "#7aa7d6",
       desc: "对比柔和，肤色干净，天空依旧明亮。适合人像。",
       sat: 1.1, curve: [[0,.015],[.25,.25],[.5,.51],[.75,.765],[1,.99]],
       hues: [[25,0,.94,1.04],[215,0,1.12,.96]], highTint: [.008,.004,-.004], grain: 0 },
-    { id: "chrome", en: "Classic Chrome", cn: "经典正片", c1: "#5a6b6e", c2: "#b9a27d",
+    { group: "富士胶片模拟", id: "chrome", en: "Classic Chrome", cn: "经典正片", c1: "#5a6b6e", c2: "#b9a27d",
       desc: "低饱和、硬阴影，蓝色偏青偏暗，红色沉稳。纪实与街拍的经典味道。",
       sat: .78, curve: [[0,.015],[.2,.15],[.5,.48],[.8,.83],[1,.985]],
       hues: [[0,5,.85,.92],[55,-3,.85,1],[100,-6,.72,.97],[215,-12,.88,.84]],
       shadowTint: [-.006,.004,.012], highTint: [.014,.008,-.01], grain: 1 },
-    { id: "neg", en: "Classic Neg", cn: "经典负片", c1: "#3f7f7a", c2: "#d9b25a",
+    { group: "富士胶片模拟", id: "neg", en: "Classic Neg", cn: "经典负片", c1: "#3f7f7a", c2: "#d9b25a",
       desc: "仿彩色负片冲印：阴影带青绿，高光偏暖，绿色发黄、蓝色发青，反差明显。",
       sat: .9, curve: [[0,.03],[.2,.14],[.5,.5],[.8,.86],[1,.97]], wb: [1,1,.98],
       hues: [[0,-6,.95,.95],[25,-3,.95,1.02],[110,-12,.8,.95],[215,-15,.95,.9]],
       shadowTint: [-.022,.01,.022], highTint: [.026,.016,-.026], grain: 1 },
-    { id: "nostalgic", en: "Nostalgic Neg", cn: "怀旧负片", c1: "#c98a3a", c2: "#8c4a32",
+    { group: "富士胶片模拟", id: "nostalgic", en: "Nostalgic Neg", cn: "怀旧负片", c1: "#c98a3a", c2: "#8c4a32",
       desc: "高光带琥珀色，阴影柔和，像七十年代的彩色照片。",
       sat: .95, curve: [[0,.03],[.25,.24],[.5,.52],[.75,.78],[1,.97]], wb: [1.04,1,.94],
       hues: [[0,5,1.05,1],[30,0,1.05,1.03],[215,-6,.9,.95]],
       shadowTint: [.01,0,-.006], highTint: [.03,.015,-.03], grain: 1 },
-    { id: "eterna", en: "Eterna", cn: "影院", c1: "#2f4f54", c2: "#8a8f78",
+    { group: "富士胶片模拟", id: "eterna", en: "Eterna", cn: "影院", c1: "#2f4f54", c2: "#8a8f78",
       desc: "低饱和、宽容度高的电影感，阴影提亮带一点青色。适合视频截图感和情绪片。",
       sat: .68, curve: [[0,.06],[.25,.27],[.5,.5],[.75,.73],[1,.95]],
       hues: [[110,8,.78,1],[215,-10,.85,1]],
       shadowTint: [-.015,.008,.02], grain: 1 },
-    { id: "reala", en: "Reala Ace", cn: "写实", c1: "#4c7fb0", c2: "#d7c3a1",
+    { group: "富士胶片模拟", id: "reala", en: "Reala Ace", cn: "写实", c1: "#4c7fb0", c2: "#d7c3a1",
       desc: "忠实色彩加上稍硬的反差，色调自然通透。",
       sat: 1.02, curve: [[0,0],[.25,.215],[.5,.5],[.75,.79],[1,1]],
       hues: [[25,0,1,1.01],[215,0,1.04,.96]], grain: 0 },
-    { id: "acros", en: "Acros", cn: "黑白", c1: "#1a1a1a", c2: "#d9d9d9",
+    { group: "富士胶片模拟", id: "acros", en: "Acros", cn: "黑白", c1: "#1a1a1a", c2: "#d9d9d9",
       desc: "细腻的黑白，中间调层次丰富，暗部有力。默认带细颗粒。",
       bw: [.38,.52,.10], curve: [[0,0],[.2,.14],[.5,.5],[.8,.87],[1,1]], grain: 1 },
   ];
@@ -325,7 +362,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
         }
         [r, g, b] = hsv2rgb(h + dh, clamp(s * sm), clamp(v * vm));
         const L0 = luma(r, g, b);
-        r = L0 + (r - L0) * film.sat; g = L0 + (g - L0) * film.sat; b = L0 + (b - L0) * film.sat;
+        // "keep": selective colour — one hue range keeps its saturation, the rest fades.
+        let sat = film.sat;
+        if (film.keep) {
+          let dist = Math.abs(h + dh - film.keep.hue); dist = dist % 360; if (dist > 180) dist = 360 - dist;
+          const wk = Math.exp(-(dist * dist) / (2 * film.keep.width * film.keep.width));
+          sat = film.keep.lo + (film.keep.hi - film.keep.lo) * wk;
+        }
+        r = L0 + (r - L0) * sat; g = L0 + (g - L0) * sat; b = L0 + (b - L0) * sat;
         out = [curve(r), curve(g), curve(b)];
       }
       const L = luma(out[0], out[1], out[2]);
@@ -459,7 +503,13 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
   const persist = () => { try { localStorage.setItem("film-darkroom-v2", JSON.stringify(state)); } catch (e) {} };
 
   const filmsEl = $("films");
+  let lastGroup = "";
   for (const f of FILMS) {
+    if (f.group !== lastGroup) {
+      const h = document.createElement("div");
+      h.className = "film-group"; h.textContent = f.group;
+      filmsEl.appendChild(h); lastGroup = f.group;
+    }
     const b = document.createElement("button");
     b.type = "button"; b.className = "film"; b.dataset.id = f.id;
     b.style.setProperty("--c1", f.c1); b.style.setProperty("--c2", f.c2);
@@ -478,7 +528,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   function syncUI() {
     const f = FILMS.find(x => x.id === state.film);
-    for (const b of filmsEl.children) b.setAttribute("aria-pressed", b.dataset.id === state.film);
+    for (const b of filmsEl.querySelectorAll(".film")) b.setAttribute("aria-pressed", b.dataset.id === state.film);
     $("desc").textContent = f.desc;
     $("tagR").textContent = f.en;
     $("strength").value = state.strength; $("strengthOut").textContent = state.strength + "%";
