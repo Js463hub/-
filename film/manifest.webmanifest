@@ -1,0 +1,16 @@
+{
+  "name": "胶片调色",
+  "short_name": "胶片调色",
+  "description": "给照片套用富士胶片模拟和流行滤镜",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141412",
+  "theme_color": "#141412",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
