@@ -53,6 +53,8 @@ body { font-family: var(--font); font-size: 15px; line-height: 1.55; -webkit-tex
   padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .wrap { max-width: 860px; margin: 0 auto; padding: 18px 16px 48px; display: grid; gap: 20px; }
 header h1 { margin: 0; font-size: 24px; letter-spacing: .02em; }
+header h1 { display: flex; align-items: center; gap: 10px; }
+.logo { width: 44px; height: 44px; border-radius: 12px; flex: none; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
 .tabs { display: flex; gap: 6px; background: var(--sunk); padding: 4px; border-radius: 12px; }
@@ -66,8 +68,7 @@ header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
 .tissues { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .tissue { display: grid; grid-template-rows: auto 1fr; text-align: left; padding: 0; border: 2px solid var(--line); border-radius: var(--r); background: var(--surface); color: inherit; font: inherit; cursor: pointer; overflow: hidden; }
-.tissue img, .tissue svg { width: 100%; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sunk); }
-.toggle { margin-left: auto; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
+.tissue img { width: 100%; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sunk); }
 .step h2 { flex-wrap: wrap; }
 .tissue span { padding: 8px 10px 10px; display: grid; gap: 2px; }
 .tissue b { font-size: 15px; }
@@ -133,7 +134,7 @@ footer { color: var(--muted); font-size: 12px; }
 <body>
 <div class="wrap">
   <header>
-    <h1>Dressing Calculate</h1>
+    <h1><img class="logo" src="icons/icon-192.png" alt="">Dressing Calculate</h1>
     <p>Wound Assessment → Dressing Selection · 选组织类型、渗液量、是否感染，直接给出主敷料和次敷料</p>
   </header>
 
@@ -145,7 +146,7 @@ footer { color: var(--muted); font-size: 12px; }
 
   <main id="view-wizard" class="wrap" style="padding:0">
     <section class="step">
-      <h2><span class="n">1</span>组织类型 Tissue type <small>混合组织按最需要处理的那种选</small><button class="toggle" id="photoToggle" type="button">看真实照片</button></h2>
+      <h2><span class="n">1</span>组织类型 Tissue type <small>混合组织按最需要处理的那种选</small></h2>
       <div class="tissues" id="tissues"></div>
     </section>
 
@@ -296,53 +297,6 @@ const GLOSSARY = [
   ["Systemic antimicrobial therapy", "全身抗菌治疗（口服 / 静脉抗生素）；标注此项的敷料需与之同用"],
 ];
 
-// Cute illustrations for each tissue type (real photos available via the toggle).
-function face(x, y, mood, ink = "#3a2a2a") {
-  const eyes = mood === "sleepy"
-    ? `<path d="M${x-13} ${y} q4 4 8 0 M${x+5} ${y} q4 4 8 0" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
-    : `<circle cx="${x-9}" cy="${y}" r="3.6" fill="${ink}"/><circle cx="${x+9}" cy="${y}" r="3.6" fill="${ink}"/><circle cx="${x-8}" cy="${y-1.3}" r="1.2" fill="#fff"/><circle cx="${x+10}" cy="${y-1.3}" r="1.2" fill="#fff"/>`;
-  const mouth = {
-    happy: `<path d="M${x-6} ${y+8} q6 7 12 0" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
-    sad: `<path d="M${x-5} ${y+12} q5 -5 10 0" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
-    worried: `<path d="M${x-5} ${y+10} q2.5 -3 5 0 q2.5 3 5 0" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
-    sleepy: `<ellipse cx="${x}" cy="${y+10}" rx="3" ry="3.6" fill="${ink}"/>`,
-  }[mood];
-  return `${eyes}${mouth}<ellipse cx="${x-17}" cy="${y+6}" rx="5" ry="3" fill="#ff8fa3" opacity=".7"/><ellipse cx="${x+17}" cy="${y+6}" rx="5" ry="3" fill="#ff8fa3" opacity=".7"/>`;
-}
-const CUTE = {
-  ni: `<rect width="160" height="120" fill="#e3ecfb"/>
-    <text x="22" y="30" font-size="16">❄️</text><text x="124" y="40" font-size="12">❄️</text>
-    <path d="M52 120 V58 q0 -36 28 -36 q28 0 28 36 V120 Z" fill="#f6c9a8"/>
-    <path d="M56 62 q0 -34 24 -34 q24 0 24 34 q-24 8 -48 0Z" fill="#3b2b2b"/>
-    <path d="M60 50 l6 4 l5 -6 l6 5" stroke="#5c4646" stroke-width="2" fill="none"/>
-    ${face(80, 84, "sad")}`,
-  n: `<rect width="160" height="120" fill="#fde7ea"/>
-    <ellipse cx="80" cy="64" rx="62" ry="42" fill="#f6c9a8"/>
-    <ellipse cx="80" cy="62" rx="46" ry="30" fill="#f08a96"/>
-    <ellipse cx="80" cy="60" rx="38" ry="24" fill="#2f2626"/>
-    ${face(80, 56, "sleepy", "#f6dede")}
-    <text x="118" y="34" font-size="13" fill="#5d6b69" font-weight="700">z</text><text x="128" y="24" font-size="10" fill="#5d6b69" font-weight="700">z</text>`,
-  s: `<rect width="160" height="120" fill="#fff6d8"/>
-    <ellipse cx="80" cy="62" rx="62" ry="42" fill="#f6c9a8"/>
-    <path d="M38 58 q4 -28 42 -28 q38 0 42 28 q2 22 -14 26 q-2 12 -8 0 q-20 6 -40 0 q-6 14 -10 0 q-14 -4 -12 -26Z" fill="#f1d35a"/>
-    <circle cx="56" cy="50" r="4" fill="#fff3b0"/><circle cx="104" cy="66" r="3" fill="#fff3b0"/>
-    ${face(80, 56, "worried")}`,
-  g: `<rect width="160" height="120" fill="#ffe3e3"/>
-    <ellipse cx="80" cy="62" rx="62" ry="42" fill="#f6c9a8"/>
-    <ellipse cx="80" cy="62" rx="48" ry="32" fill="#e8424f"/>
-    ${[[52,48],[66,40],[82,38],[98,42],[110,52],[48,66],[112,70],[60,80],[78,86],[96,82]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#ff6b77"/>`).join("")}
-    ${face(80, 58, "happy")}
-    <text x="124" y="28" font-size="14">💪</text>`,
-  e: `<rect width="160" height="120" fill="#f3e8ff"/>
-    <ellipse cx="80" cy="62" rx="62" ry="42" fill="#f6c9a8"/>
-    <ellipse cx="80" cy="62" rx="40" ry="24" fill="#f7a8c8"/>
-    ${face(80, 58, "happy")}
-    <text x="28" y="34" font-size="14">✨</text><text x="118" y="30" font-size="16">✨</text><text x="120" y="104" font-size="12">✨</text>`,
-};
-function cuteSVG(id) { return `<svg viewBox="0 0 160 120" role="img" aria-hidden="true">${CUTE[id]}</svg>`; }
-let showPhoto = false;
-try { showPhoto = localStorage.getItem("wound-photo") === "1"; } catch {}
-
 const $ = (id) => document.getElementById(id);
 const tissueOf = (id) => TISSUES.find((t) => t.id === id);
 const exOf = (id) => EXUDATE.find((e) => e.id === id);
@@ -375,9 +329,8 @@ function describe(row) {
 }
 
 function renderPickers() {
-  $("photoToggle").textContent = showPhoto ? "看卡通图" : "看真实照片";
   $("tissues").innerHTML = TISSUES.map((t) => `<button class="tissue" data-id="${t.id}" aria-pressed="${state.t === t.id}">
-      ${showPhoto ? `<img src="${t.img}" alt="${esc(t.en)} 示例照片" loading="lazy">` : cuteSVG(t.id)}<span><b>${t.zh}</b><i>${t.en}</i><i>${t.desc}</i></span></button>`).join("");
+      <img src="${t.img}" alt="${esc(t.en)} 示例照片" loading="lazy"><span><b>${t.zh}</b><i>${t.en}</i><i>${t.desc}</i></span></button>`).join("");
   const epi = state.t === "e";
   $("exudate").innerHTML = EXUDATE.map((e) => `<button class="choice" style="--c:${e.c}" data-id="${e.id}" aria-pressed="${state.e === e.id}" ${epi && e.id !== "low" ? "disabled" : ""}>${e.zh}<small>${e.en}</small></button>`).join("");
   $("infection").innerHTML = INFECTION.map((x) => `<button class="choice" style="--c:${x.c}" data-id="${x.id}" aria-pressed="${state.i === x.id}">${x.zh}<small>${x.en}</small></button>`).join("");
@@ -415,11 +368,6 @@ $("exudate").addEventListener("click", (ev) => {
 $("infection").addEventListener("click", (ev) => {
   const b = ev.target.closest("button"); if (!b) return;
   state.i = b.dataset.id; update(true);
-});
-$("photoToggle").addEventListener("click", () => {
-  showPhoto = !showPhoto;
-  try { localStorage.setItem("wound-photo", showPhoto ? "1" : "0"); } catch {}
-  update(false);
 });
 $("reset").addEventListener("click", () => { state.t = state.e = state.i = null; update(false); window.scrollTo({ top: 0, behavior: "smooth" }); });
 
