@@ -94,6 +94,7 @@ ul.items { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 ul.items li { padding: 8px 10px; background: var(--sunk); border-radius: 8px; display: grid; gap: 1px; }
 ul.items li .en { font-weight: 600; }
 ul.items li .zh { color: var(--muted); font-size: 12.5px; }
+ul.items li .eg { font-size: 12.5px; color: var(--accent); }
 ul.items li .tag { justify-self: start; font-size: 11px; margin-top: 3px; padding: 1px 7px; border-radius: 99px; background: var(--warn-bg); color: var(--warn-fg); }
 .empty { color: var(--muted); font-size: 13px; }
 .alert { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 13.5px; }
@@ -233,40 +234,41 @@ const ROWS = [
 
 // Chinese glosses, matched by the most specific key found in the item text.
 const GLOSS = [
-  ["Povidone iodine", "聚维酮碘溶液"],
-  ["Chlorhexidine", "氯己定外用"],
-  ["Inadine", "碘伏类，仅限 Inadine（聚维酮碘非黏性纱布）"],
-  ["Iodophors", "碘伏类抗菌敷料（如卡地姆碘 Iodosorb、Inadine）"],
-  ["Silver Alginates", "含银藻酸盐"],
-  ["Silver gelling", "含银亲水纤维 / 凝胶纤维（如 Aquacel Ag）"],
-  ["Silver Foam", "含银泡沫敷料"],
-  ["Silver wound contact", "含银伤口接触层"],
-  ["Silver Silicone", "含银硅胶敷料"],
-  ["Silver Charcoal", "含银活性炭敷料（吸味）"],
-  ["Sucrose-octasulfate", "蔗糖八硫酸盐（TLC-NOSF，如 UrgoStart）"],
-  ["DACC", "DACC 疏水涂层抗菌敷料（如 Cutimed Sorbact）"],
-  ["Collagen", "胶原类抗菌敷料"],
-  ["Alginogel", "藻酸盐凝胶（含酶类抗菌，如 Flaminal）"],
-  ["Medical Grade Honey", "医用蜂蜜"],
-  ["Wound Gel", "抗菌伤口凝胶（如 PHMB / Prontosan 凝胶）"],
-  ["Hydroactive", "水活性敷料（水凝胶 / 清创类）"],
-  ["Gelling Fibers", "亲水纤维 / 凝胶纤维（如 Aquacel）"],
-  ["Hypertonic Saline", "高渗盐水敷料（如 Mesalt）"],
-  ["Absorbent or Super-absorbent", "吸收性或超吸收敷料"],
-  ["Super-absorbent", "超吸收敷料"],
-  ["Alginates", "藻酸盐敷料"],
-  ["Low absorbent, foam or absorbent dressing (consider", "低吸收、泡沫或吸收性敷料，可考虑加伤口接触层"],
-  ["Low absorbent (consider", "低吸收敷料，可考虑加伤口接触层"],
-  ["Low absorbent, foam", "低吸收、泡沫或吸收性敷料"],
-  ["Low absorbent or foam", "低吸收或泡沫敷料"],
-  ["Foam", "泡沫或吸收性敷料"],
-  ["Absorbent", "吸收性敷料"],
-  ["Low absorbent", "低吸收敷料"],
+  ["Povidone iodine", "聚维酮碘溶液", "Betadine Antiseptic Solution"],
+  ["Chlorhexidine", "氯己定外用", "Chlorhexidine 0.05% 水溶液（冲洗/湿敷）、Bactigras"],
+  ["Inadine", "碘伏类，仅限 Inadine（聚维酮碘非黏性纱布）", "Inadine"],
+  ["Iodophors", "碘伏类抗菌敷料", "Inadine、Iodosorb 粉/软膏、Iodoflex"],
+  ["Silver Alginates", "含银藻酸盐", "Acticoat Absorbent、Biatain Alginate Ag、Melgisorb Ag、Tegaderm Alginate Ag"],
+  ["Silver gelling", "含银亲水纤维 / 凝胶纤维", "Aquacel Ag+ Extra、Aquacel Ag+ Ribbon、Exufiber Ag+、Durafiber Ag"],
+  ["Silver Foam", "含银泡沫敷料", "Mepilex Ag、Mepilex Border Ag、Biatain Ag、Allevyn Ag"],
+  ["Silver wound contact", "含银伤口接触层", "Acticoat Flex 3 / Flex 7、Atrauman Ag、Mepitel Ag、Physiotulle Ag"],
+  ["Silver Silicone", "含银硅胶敷料", "Mepilex Border Ag、Allevyn Ag Gentle Border、Biatain Silicone Ag"],
+  ["Silver Charcoal", "含银活性炭敷料（吸味）", "Actisorb Silver 220"],
+  ["Sucrose-octasulfate Clean", "蔗糖八硫酸盐（含清创纤维款）", "UrgoStart Plus Pad / Border"],
+  ["Sucrose-octasulfate", "蔗糖八硫酸盐（TLC-NOSF）", "UrgoStart Plus Pad、UrgoStart Plus Border、UrgoStart Contact"],
+  ["DACC", "DACC 疏水涂层抗菌敷料", "Cutimed Sorbact 纱布/条/垫、Cutimed Sorbact Gel、Sorbact Hydroactive"],
+  ["Collagen", "胶原类抗菌敷料", "Promogran Prisma、ColActive Plus Ag"],
+  ["Alginogel", "藻酸盐凝胶（含酶抗菌）", "Flaminal Hydro（渗液少）、Flaminal Forte（渗液多）"],
+  ["Medical Grade Honey", "医用蜂蜜", "Medihoney Antibacterial Wound Gel、Medihoney Calcium Alginate、Activon Tulle、L-Mesitran"],
+  ["Wound Gel", "抗菌伤口凝胶", "Prontosan Wound Gel / Gel X、Octenilin Wound Gel、Granudacyn Gel"],
+  ["Hydroactive", "水活性 / 水凝胶类，补水、自溶清创", "HydroClean Plus、Intrasite Gel、Solosite Gel、Purilon Gel"],
+  ["Gelling Fibers", "亲水纤维 / 凝胶纤维", "Aquacel Extra、Exufiber、Durafiber、Biatain Fiber"],
+  ["Hypertonic Saline", "高渗盐水敷料", "Mesalt、Curasalt"],
+  ["Absorbent or Super-absorbent", "吸收性或超吸收敷料", "Zetuvit Plus、Flivasorb、Mextra Superabsorbent、Zetuvit E"],
+  ["Super-absorbent", "超吸收敷料", "Zetuvit Plus、Flivasorb、Mextra Superabsorbent、Kliniderm Superabsorbent"],
+  ["Alginates", "藻酸盐敷料", "Kaltostat、Algisite M、Biatain Alginate、Sorbalgon"],
+  ["Low absorbent, foam or absorbent dressing (consider", "低吸收、泡沫或吸收性敷料，可考虑加伤口接触层", "Melolin、Mepilex Border Lite、Allevyn Life；接触层 Mepitel One、Adaptic Touch、Atrauman"],
+  ["Low absorbent (consider", "低吸收敷料，可考虑加伤口接触层", "Melolin、Cutiplast；接触层 Mepitel One、Adaptic Touch、Atrauman"],
+  ["Low absorbent, foam", "低吸收、泡沫或吸收性敷料", "Melolin、Cutiplast、Mepilex Border Lite、Mepilex Border、Allevyn Life"],
+  ["Low absorbent or foam", "低吸收或泡沫敷料", "Melolin、Cutiplast、Mepilex Border Lite、Allevyn Life"],
+  ["Foam", "泡沫或吸收性敷料", "Mepilex Border、Allevyn Life、Biatain Silicone；吸收垫 Zetuvit E、Exu-Dry"],
+  ["Absorbent", "吸收性敷料", "Zetuvit E、Exu-Dry、Melolin"],
+  ["Low absorbent", "低吸收敷料", "Melolin、Cutiplast、Opsite Post-Op"],
 ];
 function gloss(text) {
   const t = text.toLowerCase();
-  for (const [k, v] of GLOSS) if (t.includes(k.toLowerCase())) return v;
-  return "";
+  for (const g of GLOSS) if (t.includes(g[0].toLowerCase())) return g;
+  return null;
 }
 
 const GLOSSARY = [
@@ -302,15 +304,15 @@ function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;
 function itemHTML(text) {
   const sys = text.endsWith(SYS);
   const name = sys ? text.slice(0, -SYS.length) : text;
-  const z = gloss(name);
-  return `<li><span class="en">${esc(name)}</span>${z ? `<span class="zh">${esc(z)}</span>` : ""}${sys ? `<span class="tag">需同时全身抗菌治疗</span>` : ""}</li>`;
+  const g = gloss(name);
+  return `<li><span class="en">${esc(name)}</span>${g ? `<span class="zh">${esc(g[1])}</span><span class="eg">常用：${esc(g[2])}</span>` : ""}${sys ? `<span class="tag">需同时全身抗菌治疗</span>` : ""}</li>`;
 }
 
 function bodyHTML(row) {
   const [, , , , primary, secondary, note] = row;
   return `<div class="result-body">
     ${note ? `<div class="block"><div class="alert">⚠️ ${esc(note)}</div></div>` : ""}
-    <div class="block"><h3>主敷料 <em>Primary</em> · 任选其一</h3><ul class="items">${primary.map(itemHTML).join("")}</ul></div>
+    <div class="block"><h3>主敷料 <em>Primary</em> · 任选其一</h3><p class="disclaimer" style="margin:-4px 0 8px">“常用”为澳洲常见品牌举例，以单位库存为准</p><ul class="items">${primary.map(itemHTML).join("")}</ul></div>
     <div class="block"><h3>次敷料 <em>Secondary</em></h3>${secondary ? `<ul class="items">${itemHTML(secondary)}</ul>` : `<p class="empty" style="margin:0">原表未列出（视情况可不加或用薄膜固定）</p>`}</div>
   </div>`;
 }
@@ -378,7 +380,7 @@ function renderList(q) {
   const rows = ROWS.filter((r) => {
     if (!q) return true;
     const d = describe(r);
-    const hay = [r[0], d.en, d.zh, ...r[4], r[5], r[6] || "", ...r[4].map(gloss), gloss(r[5] || "")].join(" ").toLowerCase();
+    const hay = [r[0], d.en, d.zh, ...r[4], r[5], r[6] || "", ...[...r[4], r[5] || ""].map((x) => (gloss(x) || []).slice(1).join(" "))].join(" ").toLowerCase();
     return q.split(/\s+/).every((w) => hay.includes(w));
   });
   $("list").innerHTML = rows.length ? rows.map((r) => {
