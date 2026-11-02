@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-title" content="伤口敷料">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0f5e66">
+<title>伤口敷料速查</title>
+<style>
+[hidden] { display: none !important; }
+:root {
+  color-scheme: light dark;
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --sunk: #eaf0ef;
+  --line: #d5dedc;
+  --fg: #16201f;
+  --muted: #5d6b69;
+  --accent: #0f5e66;
+  --accent-soft: #dcecec;
+  --on-accent: #ffffff;
+  --low: #c99a00;
+  --mod: #d9640f;
+  --high: #c62a2a;
+  --yes: #c62a2a;
+  --no: #4e8a1e;
+  --warn-bg: #fff4e0;
+  --warn-fg: #6b4300;
+  --font: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101615; --surface: #172020; --sunk: #1d2928; --line: #2c3a39;
+    --fg: #e6eeec; --muted: #94a5a2; --accent: #5fc0c7; --accent-soft: #1d3a3c; --on-accent: #062224;
+    --low: #e5bb2e; --mod: #f08a3c; --high: #f06060; --yes: #f06060; --no: #8cc65a;
+    --warn-bg: #33270f; --warn-fg: #f3d49a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101615; --surface: #172020; --sunk: #1d2928; --line: #2c3a39;
+  --fg: #e6eeec; --muted: #94a5a2; --accent: #5fc0c7; --accent-soft: #1d3a3c; --on-accent: #062224;
+  --low: #e5bb2e; --mod: #f08a3c; --high: #f06060; --yes: #f06060; --no: #8cc65a;
+  --warn-bg: #33270f; --warn-fg: #f3d49a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); }
+body { font-family: var(--font); font-size: 15px; line-height: 1.55; -webkit-text-size-adjust: 100%;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.wrap { max-width: 860px; margin: 0 auto; padding: 18px 16px 48px; display: grid; gap: 20px; }
+header h1 { margin: 0; font-size: 24px; letter-spacing: .02em; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+.tabs { display: flex; gap: 6px; background: var(--sunk); padding: 4px; border-radius: 12px; }
+.tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600; padding: 9px 8px; border-radius: 9px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+.step { display: grid; gap: 10px; }
+.step h2 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.step h2 .n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 12px; }
+.step h2 small { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+.tissues { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tissue { display: grid; grid-template-rows: auto 1fr; text-align: left; padding: 0; border: 2px solid var(--line); border-radius: var(--r); background: var(--surface); color: inherit; font: inherit; cursor: pointer; overflow: hidden; }
+.tissue img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sunk); }
+.tissue span { padding: 8px 10px 10px; display: grid; gap: 2px; }
+.tissue b { font-size: 15px; }
+.tissue i { font-style: normal; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.tissue[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice { flex: 1 1 90px; min-height: 48px; border: 2px solid var(--line); background: var(--surface); color: var(--fg); border-radius: var(--r); font: inherit; font-weight: 600; cursor: pointer; display: grid; gap: 0; place-items: center; padding: 6px 10px; }
+.choice small { font-weight: 400; color: var(--muted); font-size: 11px; }
+.choice::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--accent)); margin-bottom: 2px; }
+.choice[aria-pressed="true"] { border-color: var(--c, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--accent)) 25%, transparent); }
+.choice:disabled { opacity: .35; cursor: not-allowed; }
+
+.result { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; scroll-margin-top: 12px; }
+.result-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px; background: var(--accent); color: var(--on-accent); }
+.result-head .num { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.6em; text-align: center; }
+.result-head .what { display: grid; }
+.result-head .what b { font-size: 16px; }
+.result-head .what span { font-size: 12px; opacity: .85; }
+.result-body { display: grid; gap: 0; }
+.block { padding: 14px 16px; border-top: 1px solid var(--line); }
+.block:first-child { border-top: 0; }
+.block h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.block h3 em { font-style: normal; text-transform: none; letter-spacing: 0; }
+ul.items { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+ul.items li { padding: 8px 10px; background: var(--sunk); border-radius: 8px; display: grid; gap: 1px; }
+ul.items li .en { font-weight: 600; }
+ul.items li .zh { color: var(--muted); font-size: 12.5px; }
+ul.items li .tag { justify-self: start; font-size: 11px; margin-top: 3px; padding: 1px 7px; border-radius: 99px; background: var(--warn-bg); color: var(--warn-fg); }
+.empty { color: var(--muted); font-size: 13px; }
+.alert { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 13.5px; }
+.placeholder { padding: 22px 16px; text-align: center; color: var(--muted); border: 2px dashed var(--line); border-radius: 14px; font-size: 14px; }
+.reset { justify-self: start; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 99px; cursor: pointer; }
+
+.notes { display: grid; gap: 8px; font-size: 13.5px; }
+.notes > div { padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.notes b { color: var(--accent); }
+.disclaimer { color: var(--muted); font-size: 12px; }
+
+/* All-table view */
+.search { width: 100%; font: inherit; padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.list { display: grid; gap: 8px; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.row summary { list-style: none; display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; cursor: pointer; }
+.row summary::-webkit-details-marker { display: none; }
+.row summary .num { font-weight: 800; font-size: 17px; color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
+.row summary .t { display: grid; }
+.row summary .t b { font-size: 14px; }
+.row summary .t span { font-size: 12px; color: var(--muted); }
+.row summary .chev { color: var(--muted); transition: transform .15s; }
+.row[open] summary .chev { transform: rotate(90deg); }
+.row .result-body { border-top: 1px solid var(--line); }
+.pill { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 99px; color: #fff; margin-left: 4px; vertical-align: 1px; }
+
+.glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.glossary div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; font-size: 13px; }
+.glossary b { display: block; font-size: 14px; }
+.glossary span { color: var(--muted); }
+footer { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>伤口敷料速查</h1>
+    <p>Wound Assessment → Dressing Selection · 选组织类型、渗液量、是否感染，直接给出主敷料和次敷料</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-view="wizard">按伤口选</button>
+    <button role="tab" aria-selected="false" data-view="all">全部 26 条</button>
+    <button role="tab" aria-selected="false" data-view="glossary">敷料词汇</button>
+  </div>
+
+  <main id="view-wizard" class="wrap" style="padding:0">
+    <section class="step">
+      <h2><span class="n">1</span>组织类型 Tissue type <small>混合组织按最需要处理的那种选</small></h2>
+      <div class="tissues" id="tissues"></div>
+    </section>
+
+    <section class="step">
+      <h2><span class="n">2</span>渗液量 Exudate</h2>
+      <div class="choices" id="exudate"></div>
+    </section>
+
+    <section class="step">
+      <h2><span class="n">3</span>是否感染 Infection</h2>
+      <div class="choices" id="infection"></div>
+    </section>
+
+    <section id="out" aria-live="polite"></section>
+    <button class="reset" id="reset" hidden>重新选择</button>
+
+    <section class="notes">
+      <div><b>混合组织：</b>按你要处理的那种组织选。例如伤口同时有腐肉和肉芽，就按 <b>Slough 腐肉</b> 那一组选。</div>
+      <div><b>有异味 Odour：</b>考虑加用吸味敷料（活性炭 Charcoal / Carbon，含银或不含银）。</div>
+      <div><b>静脉性湿疹 Venous eczema：</b>可使用氧化锌糊绷带 Zinc paste bandages。</div>
+    </section>
+  </main>
+
+  <main id="view-all" hidden style="display:grid;gap:12px">
+    <input class="search" id="q" type="search" placeholder="搜索：slough、silver、honey、高渗…" autocomplete="off">
+    <div class="list" id="list"></div>
+  </main>
+
+  <main id="view-glossary" hidden style="display:grid;gap:12px">
+    <p class="disclaimer" style="margin:0">中文为通用叫法，帮助理解类别；具体产品以单位库存和名称为准。</p>
+    <div class="glossary" id="glossary"></div>
+  </main>
+
+  <footer>
+    依据：Australian Government Department of Health and Aged Care《Wound Assessment / Consumable Choice Guide》决策树（2024）。
+    仅供参考，需结合临床判断使用；感染、缺血、病情恶化请及时上报 / 转介。
+  </footer>
+</div>
+
+<script>
+const TISSUES = [
+  { id: "ni", en: "Necrosis (ischemic)", zh: "坏死 · 缺血性", desc: "干性坏死组织，因缺血所致（如足趾干性坏疽）", img: "img/necrosis-ischemic.jpg", label: "Necrotic (ischemic)" },
+  { id: "n",  en: "Necrosis (not ischemic)", zh: "坏死 · 非缺血", desc: "干燥失活组织（黑痂），非缺血导致", img: "img/necrosis.jpg", label: "Necrotic" },
+  { id: "s",  en: "Slough", zh: "腐肉", desc: "黄 / 白色、湿软黏附的失活组织", img: "img/slough.jpg", label: "Slough" },
+  { id: "g",  en: "Granulating", zh: "肉芽", desc: "红色、湿润、颗粒状健康组织", img: "img/granulating.jpg", label: "Granulation" },
+  { id: "e",  en: "Epithelialising", zh: "上皮化", desc: "粉色新生上皮，伤口接近愈合", img: "img/epithelialising.jpg", label: "Epithelialising" },
+];
+const EXUDATE = [
+  { id: "low", en: "Low", zh: "少量", c: "var(--low)" },
+  { id: "mod", en: "Moderate", zh: "中量", c: "var(--mod)" },
+  { id: "high", en: "High", zh: "大量", c: "var(--high)" },
+];
+const INFECTION = [
+  { id: "yes", en: "Yes", zh: "有感染", c: "var(--yes)" },
+  { id: "no", en: "No", zh: "无感染", c: "var(--no)" },
+];
+
+const SYS = " (in conjunction with systemic antimicrobial therapy)";
+// [no, tissue, exudate, infected, primary[], secondary, note]
+const ROWS = [
+  [1, "ni", "low", true,  ["Povidone iodine solution", "Chlorhexidine Topical Application", "Antimicrobial (Iodophors) (Inadine only)"], "Low absorbent"],
+  [2, "ni", "low", false, ["Povidone iodine solution", "Chlorhexidine Topical Application", "Antimicrobial (Iodophors) (Inadine only)"], "Low absorbent"],
+  [3, "ni", "mod", true,  ["Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver gelling fibres)", "Antimicrobial (Silver Foam)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Silicone)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Sucrose-octasulfate)", "Antimicrobial (DACC-coated)"], "Foam or absorbent dressing"],
+  [4, "ni", "mod", false, ["Antimicrobial (Iodophors) (Inadine only)", "Gelling Fibers"], "Foam or absorbent dressing"],
+  [5, "ni", "high", true, ["Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver gelling fibres)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (DACC-coated)"], "Super-absorbent dressing"],
+  [6, "ni", "high", false, ["Antimicrobial (Iodophors) (Inadine only)", "Gelling Fibers"], "Super-absorbent dressing"],
+  [7, "n", "low", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Medical Grade Honey)", "Antimicrobial (Wound Gels)"], "Low absorbent, foam or absorbent dressing"],
+  [8, "n", "low", false, ["Hydroactive dressing", "Antimicrobial (Wound Gel)", "Antimicrobial (Alginogels)", "Antimicrobial (DACC-coated)", "Antimicrobial (Sucrose-octasulfate Clean)", "Low absorbent (consider contact layer)"], "Low absorbent, foam or absorbent dressing"],
+  [9, "n", "mod", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver Foam)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Silicone)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Sucrose-octasulfate)", "Antimicrobial (Wound Gels)", "Antimicrobial (DACC-coated)", "Hydroactive" + SYS, "Gelling Fibers" + SYS, "Hypertonic Saline" + SYS], "Foam or absorbent dressing"],
+  [10, "n", "mod", false, ["Foam dressing or absorbent dressing", "Alginates", "Hydroactive", "Gelling Fibers", "Hypertonic Saline"], "Foam or absorbent dressing"],
+  [11, "n", "high", true, ["Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver gelling fibres)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (DACC-coated)", "Hydroactive" + SYS, "Gelling Fibers" + SYS, "Hypertonic Saline" + SYS], "Super-absorbent dressing"],
+  [12, "n", "high", false, ["Absorbent or Super-absorbent dressing", "Alginates", "Hydroactive", "Gelling Fibers", "Hypertonic Saline"], "Super-absorbent dressing"],
+  [13, "s", "low", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Medical Grade Honey)", "Antimicrobial (Silver Foam)", "Antimicrobial (Wound Gels)"], "Foam or absorbent dressing"],
+  [14, "s", "low", false, ["Antimicrobial (Wound Gel)", "Antimicrobial (Alginogel)", "Hydroactive dressing"], "Foam or absorbent dressing"],
+  [15, "s", "mod", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver Foam)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Silicone)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Sucrose-octasulfate)", "Antimicrobial (DACC-coated)", "Antimicrobial (Collagen-based)", "Hydroactive" + SYS, "Gelling Fibers" + SYS, "Hypertonic Saline" + SYS], "Foam or absorbent dressing"],
+  [16, "s", "mod", false, ["Alginates", "Hydroactive", "Gelling Fibers", "Hypertonic Saline", "Antimicrobial (Sucrose-octasulfate)"], "Foam or absorbent dressing"],
+  [17, "s", "high", true, ["Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver gelling fibres)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Sucrose-octasulfate)", "Antimicrobial (DACC-coated)", "Antimicrobial (Collagen-based)", "Hydroactive" + SYS, "Gelling Fibers" + SYS, "Hypertonic Saline" + SYS], "Super-absorbent dressing"],
+  [18, "s", "high", false, ["Alginates", "Gelling Fibers", "Hypertonic Saline"], "Super-absorbent dressing"],
+  [19, "g", "low", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Medical Grade Honey)", "Antimicrobial (Wound Gels)", "Antimicrobial (Sucrose-octasulfate)"], "Foam or absorbent dressing"],
+  [20, "g", "low", false, ["Low absorbent, Foam or absorbent dressing (consider contact layer)"], "Low absorbent, foam or absorbent dressing (consider contact layer)"],
+  [21, "g", "mod", true,  ["Antimicrobial (Alginogels)", "Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver Foam)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Silicone)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Sucrose-octasulfate)", "Antimicrobial (DACC-coated)", "Antimicrobial (Collagen-based)", "Hydroactive" + SYS, "Gelling Fibers" + SYS], "Foam or absorbent dressing"],
+  [22, "g", "mod", false, ["Foam dressing or absorbent dressing", "Alginates", "Hydroactive", "Gelling Fibers"], "Foam or absorbent dressing"],
+  [23, "g", "high", true, ["Antimicrobial (Iodophors)", "Antimicrobial (Silver Alginates)", "Antimicrobial (Silver wound contact layer)", "Antimicrobial (Silver Charcoal)", "Antimicrobial (Silver gelling fibres)", "Antimicrobial (DACC-coated)", "Antimicrobial (Collagen-based)", "Hydroactive" + SYS, "Gelling Fibers" + SYS], "Super-absorbent dressing"],
+  [24, "g", "high", false, ["Super-absorbent dressing", "Alginates", "Hydroactive", "Gelling Fibers"], "Super-absorbent dressing"],
+  [25, "e", "low", false, ["Low absorbent or foam"], ""],
+  [26, "e", "low", true,  ["Low absorbent or foam"], "", "考虑升级处理 / 评估是否有软组织感染（Consider escalation of care / review for possible soft tissue infection）"],
+];
+
+// Chinese glosses, matched by the most specific key found in the item text.
+const GLOSS = [
+  ["Povidone iodine", "聚维酮碘溶液"],
+  ["Chlorhexidine", "氯己定外用"],
+  ["Inadine", "碘伏类，仅限 Inadine（聚维酮碘非黏性纱布）"],
+  ["Iodophors", "碘伏类抗菌敷料（如卡地姆碘 Iodosorb、Inadine）"],
+  ["Silver Alginates", "含银藻酸盐"],
+  ["Silver gelling", "含银亲水纤维 / 凝胶纤维（如 Aquacel Ag）"],
+  ["Silver Foam", "含银泡沫敷料"],
+  ["Silver wound contact", "含银伤口接触层"],
+  ["Silver Silicone", "含银硅胶敷料"],
+  ["Silver Charcoal", "含银活性炭敷料（吸味）"],
+  ["Sucrose-octasulfate", "蔗糖八硫酸盐（TLC-NOSF，如 UrgoStart）"],
+  ["DACC", "DACC 疏水涂层抗菌敷料（如 Cutimed Sorbact）"],
+  ["Collagen", "胶原类抗菌敷料"],
+  ["Alginogel", "藻酸盐凝胶（含酶类抗菌，如 Flaminal）"],
+  ["Medical Grade Honey", "医用蜂蜜"],
+  ["Wound Gel", "抗菌伤口凝胶（如 PHMB / Prontosan 凝胶）"],
+  ["Hydroactive", "水活性敷料（水凝胶 / 清创类）"],
+  ["Gelling Fibers", "亲水纤维 / 凝胶纤维（如 Aquacel）"],
+  ["Hypertonic Saline", "高渗盐水敷料（如 Mesalt）"],
+  ["Absorbent or Super-absorbent", "吸收性或超吸收敷料"],
+  ["Super-absorbent", "超吸收敷料"],
+  ["Alginates", "藻酸盐敷料"],
+  ["Low absorbent, foam or absorbent dressing (consider", "低吸收、泡沫或吸收性敷料，可考虑加伤口接触层"],
+  ["Low absorbent (consider", "低吸收敷料，可考虑加伤口接触层"],
+  ["Low absorbent, foam", "低吸收、泡沫或吸收性敷料"],
+  ["Low absorbent or foam", "低吸收或泡沫敷料"],
+  ["Foam", "泡沫或吸收性敷料"],
+  ["Absorbent", "吸收性敷料"],
+  ["Low absorbent", "低吸收敷料"],
+];
+function gloss(text) {
+  const t = text.toLowerCase();
+  for (const [k, v] of GLOSS) if (t.includes(k.toLowerCase())) return v;
+  return "";
+}
+
+const GLOSSARY = [
+  ["Antimicrobial", "抗菌敷料，用于感染或高感染风险伤口；括号里是抗菌成分"],
+  ["Iodophors", "碘伏类：聚维酮碘、卡地姆碘。“Inadine only”指只用 Inadine"],
+  ["Silver", "银离子类：藻酸盐、亲水纤维、泡沫、接触层、硅胶、活性炭等载体"],
+  ["Sucrose-octasulfate", "蔗糖八硫酸盐（TLC-NOSF），如 UrgoStart / UrgoStart Plus"],
+  ["DACC-coated", "DACC 疏水涂层，靠物理吸附细菌，如 Cutimed Sorbact"],
+  ["Alginogel", "藻酸盐凝胶，含酶抗菌，如 Flaminal Hydro / Forte"],
+  ["Medical Grade Honey", "医用蜂蜜，如 Medihoney"],
+  ["Wound Gel", "抗菌伤口凝胶，如 Prontosan Gel（PHMB）"],
+  ["Collagen-based", "胶原类（含抗菌成分）"],
+  ["Hydroactive", "水活性 / 水凝胶类，给干燥伤口补水、帮助自溶清创"],
+  ["Gelling Fibers", "亲水纤维，吸液后成凝胶，如 Aquacel"],
+  ["Alginates", "藻酸盐，吸收中–大量渗液，可止少量出血"],
+  ["Hypertonic Saline", "高渗盐水敷料，吸出渗液和腐肉，如 Mesalt"],
+  ["Wound contact layer", "伤口接触层，防粘连、保护肉芽 / 上皮"],
+  ["Low absorbent", "低吸收敷料，如薄膜、薄型敷料、非黏性纱布"],
+  ["Foam / Absorbent", "泡沫或吸收垫，用于中量渗液"],
+  ["Super-absorbent", "超吸收敷料（高分子吸收垫），用于大量渗液"],
+  ["Charcoal / Carbon", "活性炭吸味敷料，伤口有异味时加用"],
+  ["Zinc paste bandage", "氧化锌糊绷带，用于静脉性湿疹"],
+  ["Systemic antimicrobial therapy", "全身抗菌治疗（口服 / 静脉抗生素）；标注此项的敷料需与之同用"],
+];
+
+const $ = (id) => document.getElementById(id);
+const tissueOf = (id) => TISSUES.find((t) => t.id === id);
+const exOf = (id) => EXUDATE.find((e) => e.id === id);
+const state = { t: null, e: null, i: null };
+
+function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function itemHTML(text) {
+  const sys = text.endsWith(SYS);
+  const name = sys ? text.slice(0, -SYS.length) : text;
+  const z = gloss(name);
+  return `<li><span class="en">${esc(name)}</span>${z ? `<span class="zh">${esc(z)}</span>` : ""}${sys ? `<span class="tag">需同时全身抗菌治疗</span>` : ""}</li>`;
+}
+
+function bodyHTML(row) {
+  const [, , , , primary, secondary, note] = row;
+  return `<div class="result-body">
+    ${note ? `<div class="block"><div class="alert">⚠️ ${esc(note)}</div></div>` : ""}
+    <div class="block"><h3>主敷料 <em>Primary</em> · 任选其一</h3><ul class="items">${primary.map(itemHTML).join("")}</ul></div>
+    <div class="block"><h3>次敷料 <em>Secondary</em></h3>${secondary ? `<ul class="items">${itemHTML(secondary)}</ul>` : `<p class="empty" style="margin:0">原表未列出（视情况可不加或用薄膜固定）</p>`}</div>
+  </div>`;
+}
+
+function describe(row) {
+  const t = tissueOf(row[1]), e = exOf(row[2]);
+  return {
+    en: `${t.label} / ${e.en.toLowerCase()} / ${row[3] ? "infected" : "not infected"}`,
+    zh: `${t.zh} · 渗液${e.zh} · ${row[3] ? "有感染" : "无感染"}`,
+  };
+}
+
+function renderPickers() {
+  $("tissues").innerHTML = TISSUES.map((t) => `<button class="tissue" data-id="${t.id}" aria-pressed="${state.t === t.id}">
+      <img src="${t.img}" alt="${esc(t.en)} 示例照片" loading="lazy"><span><b>${t.zh}</b><i>${t.en}</i><i>${t.desc}</i></span></button>`).join("");
+  const epi = state.t === "e";
+  $("exudate").innerHTML = EXUDATE.map((e) => `<button class="choice" style="--c:${e.c}" data-id="${e.id}" aria-pressed="${state.e === e.id}" ${epi && e.id !== "low" ? "disabled" : ""}>${e.zh}<small>${e.en}</small></button>`).join("");
+  $("infection").innerHTML = INFECTION.map((x) => `<button class="choice" style="--c:${x.c}" data-id="${x.id}" aria-pressed="${state.i === x.id}">${x.zh}<small>${x.en}</small></button>`).join("");
+}
+
+function renderResult(scroll) {
+  const out = $("out");
+  $("reset").hidden = !(state.t || state.e || state.i);
+  if (!(state.t && state.e && state.i)) {
+    const left = [!state.t && "组织类型", !state.e && "渗液量", !state.i && "是否感染"].filter(Boolean).join("、");
+    out.innerHTML = `<div class="placeholder">还需选择：${left}</div>`;
+    return;
+  }
+  const row = ROWS.find((r) => r[1] === state.t && r[2] === state.e && r[3] === (state.i === "yes"));
+  const d = describe(row);
+  out.innerHTML = `<div class="result" id="card"><div class="result-head"><div class="num">${row[0]}</div><div class="what"><b>${d.zh}</b><span>${d.en}</span></div></div>${bodyHTML(row)}</div>`;
+  if (scroll) $("card").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function saveHash() {
+  const h = [state.t, state.e, state.i].map((v) => v || "").join("-");
+  history.replaceState(null, "", h.replace(/-+$/, "") ? "#" + h : location.pathname);
+}
+
+$("tissues").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  state.t = b.dataset.id;
+  if (state.t === "e") state.e = "low";
+  update(false);
+});
+$("exudate").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b || b.disabled) return;
+  state.e = b.dataset.id; update(false);
+});
+$("infection").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  state.i = b.dataset.id; update(true);
+});
+$("reset").addEventListener("click", () => { state.t = state.e = state.i = null; update(false); window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+function update(scroll) {
+  renderPickers();
+  renderResult(scroll && state.t && state.e && state.i);
+  saveHash();
+}
+
+// All-rows view
+function renderList(q) {
+  q = (q || "").trim().toLowerCase();
+  const rows = ROWS.filter((r) => {
+    if (!q) return true;
+    const d = describe(r);
+    const hay = [r[0], d.en, d.zh, ...r[4], r[5], r[6] || "", ...r[4].map(gloss), gloss(r[5] || "")].join(" ").toLowerCase();
+    return q.split(/\s+/).every((w) => hay.includes(w));
+  });
+  $("list").innerHTML = rows.length ? rows.map((r) => {
+    const d = describe(r);
+    return `<details class="row"><summary><span class="num">${r[0]}</span><span class="t"><b>${d.zh}</b><span>${d.en}</span></span><span class="chev">›</span></summary>${bodyHTML(r)}</details>`;
+  }).join("") : `<div class="placeholder">没有匹配的条目</div>`;
+}
+$("q").addEventListener("input", (e) => renderList(e.target.value));
+
+$("glossary").innerHTML = GLOSSARY.map(([en, zh]) => `<div><b>${esc(en)}</b><span>${esc(zh)}</span></div>`).join("");
+
+// Tabs
+document.querySelector(".tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  for (const t of document.querySelectorAll(".tabs button")) t.setAttribute("aria-selected", t === b);
+  for (const v of ["wizard", "all", "glossary"]) $("view-" + v).hidden = v !== b.dataset.view;
+  try { localStorage.setItem("wound-tab", b.dataset.view); } catch {}
+});
+
+// Restore selection from the URL hash, e.g. #s-high-yes
+(function init() {
+  const [t, e, i] = decodeURIComponent(location.hash.slice(1)).split("-");
+  if (tissueOf(t)) state.t = t;
+  if (exOf(e)) state.e = e;
+  if (i === "yes" || i === "no") state.i = i;
+  if (state.t === "e" && state.e) state.e = "low";
+  update(false);
+  renderList("");
+  try {
+    const tab = localStorage.getItem("wound-tab");
+    if (tab && tab !== "wizard") document.querySelector(`.tabs [data-view="${tab}"]`)?.click();
+  } catch {}
+})();
+
+if ("serviceWorker" in navigator && location.protocol === "https:" && !/claude\.ai|claudeusercontent/.test(location.hostname)) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
