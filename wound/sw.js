@@ -1,6 +1,6 @@
 // Offline cache for 伤口敷料速查. Bump VERSION when the cached file list changes.
-const VERSION = "wound-v2";
-const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "img/necrosis-ischemic.jpg", "img/necrosis.jpg", "img/slough.jpg", "img/granulating.jpg", "img/epithelialising.jpg"];
+const VERSION = "wound-v3";
+const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "img/necrosis-ischemic.jpg", "img/necrosis.jpg", "img/slough.jpg", "img/granulating.jpg", "img/epithelialising.jpg"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
