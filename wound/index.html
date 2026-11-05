@@ -103,6 +103,18 @@ ul.items li .tag { justify-self: start; font-size: 11px; margin-top: 3px; paddin
 .empty { color: var(--muted); font-size: 13px; }
 .alert { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 13.5px; }
 .placeholder { padding: 22px 16px; text-align: center; color: var(--muted); border: 2px dashed var(--line); border-radius: 14px; font-size: 14px; }
+.ai { display: grid; gap: 10px; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.ai-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ai h2 { margin: 0; font-size: 15px; }
+.ai p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.ai-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 99px; cursor: pointer; }
+.ai-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ai-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ai-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.ai-out { font-size: 13.5px; display: grid; gap: 6px; }
+.ai-out .why { padding: 10px 12px; background: var(--sunk); border-radius: 8px; white-space: pre-wrap; }
+.ai-out .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-out .chips span { font-size: 12px; padding: 2px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--fg); }
 .reset { justify-self: start; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 99px; cursor: pointer; }
 
 .notes { display: grid; gap: 8px; font-size: 13.5px; }
@@ -146,6 +158,19 @@ footer { color: var(--muted); font-size: 12px; }
   </div>
 
   <main id="view-wizard" class="wrap" style="padding:0">
+
+    <section class="ai" id="ai" hidden>
+      <div class="ai-row">
+        <div style="flex:1;min-width:0">
+          <h2>拍照识别</h2>
+          <p>拍一张或选一张伤口照片，Claude 帮你判断组织类型和渗液量，并自动帮你选好下面的选项。感染要你自己在床边确认。</p>
+        </div>
+        <label class="ai-btn"><input type="file" id="aiFile" accept="image/*">📷 拍照 / 选照片</label>
+      </div>
+      <div class="ai-row" id="aiBusy" hidden><img class="ai-thumb" id="aiThumb" alt=""><span id="aiStatus">正在看照片…</span></div>
+      <div class="ai-out" id="aiOut" hidden></div>
+      <p>照片只用来这一次分析，不会保存在网页里。拍照时尽量避开病人姓名和 ID。</p>
+    </section>
     <section class="step">
       <h2><span class="n">1</span>组织类型 Tissue type <small>混合组织按最需要处理的那种选</small></h2>
       <div class="tissues" id="tissues"></div>
@@ -417,6 +442,67 @@ document.querySelector(".tabs").addEventListener("click", (ev) => {
     const tab = localStorage.getItem("wound-tab");
     if (tab && tab !== "wizard") document.querySelector(`.tabs [data-view="${tab}"]`)?.click();
   } catch {}
+})();
+
+
+// Photo recognition via Claude (only inside the claude.ai viewer).
+(async function initAI() {
+  if (!window.claude?.use) return;
+  const sample = await claude.use("sample");
+  if (!sample) return;
+  const caps = await sample.limits().catch(() => null);
+  if (!caps?.images) return;
+  $("ai").hidden = false;
+  const PROMPT = `You are helping a nurse use a wound dressing decision tree (Australian Wound Assessment / Consumable Choice Guide).
+Look at the wound photo and classify it. Rules:
+- tissue: the tissue type that most needs managing. If mixed (e.g. slough + granulation), pick the worse one (necrosis > slough > granulation > epithelialising).
+  "ni" = necrosis due to ischemia (dry, e.g. ischemic toe / arterial), "n" = necrosis / eschar not due to ischemia, "s" = slough, "g" = granulating, "e" = epithelialising.
+- exudate: "low" | "mod" | "high" judged from moisture, staining, maceration.
+- infection: "yes" only if clear signs are visible (spreading erythema, pus, swelling); "no" if it looks clean; "unknown" if a photo cannot tell. Prefer "unknown" when unsure.
+- If the photo is not a wound, set tissue to null.
+Reply with only JSON: {"tissue":"s","exudate":"low","infection":"unknown","confidence":"low|medium|high","reason_zh":"用中文 2-3 句说明你看到了什么、为什么这样判断","watch_zh":"用中文 1-2 句提醒需要在床边确认的点（例如是否压力性损伤、周围皮肤、感染征象）"}`;
+  $("aiFile").addEventListener("change", async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = "";
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    $("aiThumb").src = url;
+    $("aiBusy").hidden = false;
+    $("aiStatus").textContent = "正在看照片…（大约 10–40 秒）";
+    $("aiOut").hidden = true;
+    try {
+      const r = await sample.json(PROMPT, { images: file, cache: false });
+      if (!r || !tissueOf(r.tissue)) {
+        $("aiStatus").textContent = "这张照片看不出伤口，换一张清楚一点的试试。";
+        return;
+      }
+      state.t = r.tissue;
+      state.e = exOf(r.exudate) ? r.exudate : null;
+      if (state.t === "e") state.e = "low";
+      state.i = r.infection === "yes" || r.infection === "no" ? r.infection : null;
+      const conf = { low: "把握不大", medium: "中等把握", high: "比较有把握" }[r.confidence] || "";
+      $("aiStatus").textContent = "识别完成，已帮你选好，请核对。";
+      $("aiOut").innerHTML = `<div class="chips"><span>${esc(tissueOf(r.tissue).zh)}</span>${state.e ? `<span>渗液${esc(exOf(state.e).zh)}</span>` : ""}<span>${state.i ? (state.i === "yes" ? "有感染" : "无感染") : "感染：请你判断"}</span>${conf ? `<span>${conf}</span>` : ""}</div>`
+        + (r.reason_zh ? `<div class="why">${esc(String(r.reason_zh))}</div>` : "")
+        + (r.watch_zh ? `<div class="alert">${esc(String(r.watch_zh))}</div>` : "")
+        + (state.i ? "" : `<div class="alert">照片看不出有没有感染，请在下面第 3 步自己选。</div>`);
+      $("aiOut").hidden = false;
+      update(!!state.i);
+      if (!state.i) $("infection").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (e) {
+      const msg = {
+        not_granted: "你没有允许这个网页使用 Claude，所以拍照识别用不了。",
+        sampling_disabled: "这个账号用不了 Claude 识别。",
+        rate_limited: "用得太频繁了，过一会儿再试。",
+        image_rejected: "这张图片打不开或太大，换一张试试。",
+        refused: "Claude 没有分析这张照片，换一张试试。",
+        invalid_json: "识别结果读不出来，再试一次。",
+        session_expired: "登录过期了，重新登录 claude.ai 再试。",
+      }[e?.code] || "识别失败了，再试一次。";
+      $("aiStatus").textContent = msg;
+      if (["not_granted", "sampling_disabled", "images_unavailable", "not_declared", "capability_disabled", "capability_removed"].includes(e?.code)) $("ai").hidden = true;
+    }
+  });
 })();
 
 if ("serviceWorker" in navigator && location.protocol === "https:" && !/claude\.ai|claudeusercontent/.test(location.hostname)) {
