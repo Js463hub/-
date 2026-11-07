@@ -1,0 +1,652 @@
+<meta charset="utf-8">
+<title>麻将陪练</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0f5c47">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one phone-width column; a jade header band with four tabs (入门 / 助手 / 练习 / 小抄), each tab a stack of sections built around real tiles. */
+:root {
+  --bg: #e9efec;
+  --surface: #f8faf9;
+  --ink: #16241f;
+  --muted: #56675f;
+  --line: #cbd8d2;
+  --jade: #0f5c47;
+  --jade-soft: #d5e8e0;
+  --red: #c0352b;
+  --red-soft: #f6dedb;
+  --gold: #9a6b12;
+  --tile-face: #fbf8f0;
+  --tile-edge: #dcd6c6;
+  --tile-back: #1d7a5d;
+  --tile-ink: #1b1b1b;
+  --tile-red: #c32a1f;
+  --tile-green: #13824f;
+  --tile-blue: #1f4fa3;
+  --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-body: "Noto Sans SC", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1714; --surface: #15221e; --ink: #e4ece8; --muted: #9db0a7; --line: #2a3b35;
+    --jade: #4cc29a; --jade-soft: #173a30; --red: #f07a6f; --red-soft: #3c1e1b; --gold: #e0b45a;
+    --tile-edge: #b9b29f; --tile-back: #0f5c47; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1714; --surface: #15221e; --ink: #e4ece8; --muted: #9db0a7; --line: #2a3b35;
+  --jade: #4cc29a; --jade-soft: #173a30; --red: #f07a6f; --red-soft: #3c1e1b; --gold: #e0b45a;
+  --tile-edge: #b9b29f; --tile-back: #0f5c47; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.65; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: #0f5c47; }
+.wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { background: #0f5c47; color: #f3f7f5; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+header .wrap { padding-block: 14px 0; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--font-display); font-weight: 900; font-size: 24px; margin: 0; letter-spacing: .04em; }
+.brand span { font-size: 13px; opacity: .8; }
+nav { display: flex; gap: 4px; margin-top: 10px; }
+nav a { flex: 1; text-align: center; color: #cfe3da; text-decoration: none; padding: 8px 0 10px; font-weight: 500; border-bottom: 3px solid transparent; }
+nav a[aria-current="page"] { color: #fff; border-bottom-color: #f2c14e; }
+nav a:focus-visible, button:focus-visible { outline: 2px solid #f2c14e; outline-offset: 2px; }
+main .wrap { padding-block: 18px 48px; display: grid; gap: 18px; }
+section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0 0 8px; text-wrap: balance; }
+h3 { font-size: 15px; margin: 14px 0 6px; }
+p { margin: 6px 0; }
+.muted { color: var(--muted); font-size: 13px; }
+.step { display: inline-block; font-size: 12px; letter-spacing: .08em; color: var(--jade); font-weight: 700; margin-bottom: 2px; }
+ul.tight { margin: 6px 0; padding-left: 1.2em; }
+ul.tight li { margin: 4px 0; }
+b.hl { color: var(--red); }
+kbd { font-family: var(--font-body); background: var(--jade-soft); color: var(--jade); border-radius: 4px; padding: 0 5px; font-weight: 700; font-size: 13px; }
+
+/* tiles */
+.row { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.group { display: inline-flex; gap: 2px; padding: 4px; border-radius: 7px; background: var(--jade-soft); }
+.group.pair { background: var(--red-soft); }
+.groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.tile { --tw: 34px; width: var(--tw); height: calc(var(--tw) * 1.36); background: var(--tile-face); border-radius: 5px;
+  box-shadow: inset 0 0 0 1px var(--tile-edge), 0 3px 0 var(--tile-back); position: relative; display: inline-flex; align-items: center; justify-content: center;
+  flex: none; color: var(--tile-ink); font-family: var(--font-display); user-select: none; margin-bottom: 3px; }
+.tile svg { width: 86%; height: 86%; display: block; }
+.tile .ix { position: absolute; top: 1px; left: 3px; font: 700 9px/1 var(--font-body); color: #8a7f66; }
+.tile.sm { --tw: 26px; }
+.tile.lg { --tw: 42px; }
+button.tile { border: 0; padding: 0; cursor: pointer; }
+button.tile:active { transform: translateY(2px); box-shadow: inset 0 0 0 1px var(--tile-edge), 0 1px 0 var(--tile-back); }
+button.tile[disabled] { opacity: .3; cursor: default; }
+.tile.on { box-shadow: inset 0 0 0 2px var(--tile-red), 0 3px 0 var(--tile-red); }
+.tile.good { box-shadow: inset 0 0 0 2px var(--tile-green), 0 3px 0 var(--tile-green); }
+.tile.raise { transform: translateY(-6px); }
+
+/* controls */
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+button.b { font: 500 14px var(--font-body); border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+button.b.primary { background: var(--jade); border-color: var(--jade); color: var(--surface); }
+button.b[aria-pressed="true"] { background: var(--jade-soft); border-color: var(--jade); color: var(--jade); font-weight: 700; }
+.palette { display: grid; gap: 8px; margin-top: 8px; }
+.palette .row { gap: 4px; flex-wrap: nowrap; }
+.palette .tile { --tw: min(34px, calc((100vw - 104px) / 9)); }
+.hand { min-height: 66px; padding: 10px 8px 6px; border-radius: 8px; background: var(--jade-soft); display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.hand .empty { color: var(--muted); font-size: 13px; align-self: center; }
+.count { font-variant-numeric: tabular-nums; font-weight: 700; }
+.verdict { border-radius: 8px; padding: 12px; margin-top: 12px; }
+.verdict.win { background: var(--red-soft); }
+.verdict.ten { background: var(--jade-soft); }
+.verdict.far { background: var(--bg); }
+.verdict .big { font-family: var(--font-display); font-size: 20px; font-weight: 900; }
+table.adv { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+table.adv td, table.adv th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+table.adv th { font-size: 12px; color: var(--muted); font-weight: 500; }
+table.adv tr.best td { background: color-mix(in srgb, var(--jade-soft) 70%, transparent); }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--jade-soft); color: var(--jade); font-weight: 700; white-space: nowrap; }
+.chip.red { background: var(--red-soft); color: var(--red); }
+dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 6px 0; }
+dl.terms dt { font-weight: 700; color: var(--jade); }
+dl.terms dd { margin: 0; min-width: 0; }
+.checklist label { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.checklist input { margin-top: 5px; accent-color: var(--jade); }
+.score { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 380px) { .tile { --tw: 30px; } .tile.lg { --tw: 36px; } }
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="brand"><h1>麻将陪练</h1><span>不会打也能上桌</span></div>
+    <nav>
+      <a href="#learn" data-v="learn">入门</a>
+      <a href="#helper" data-v="helper">助手</a>
+      <a href="#practice" data-v="practice">练习</a>
+      <a href="#cheat" data-v="cheat">小抄</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ================= 入门 ================= -->
+<div class="wrap view" id="v-learn">
+  <section class="card">
+    <span class="step">第 1 步 · 认牌</span>
+    <h2>一副麻将里有什么</h2>
+    <p>三种花色，每种 1 到 9，每张牌都有 <b>4 张</b>一样的。</p>
+    <h3>万（写着“萬”）</h3><div class="row" data-tiles="0-8"></div>
+    <h3>条（竹子）</h3><div class="row" data-tiles="9-17"></div>
+    <p class="muted">一条通常画成一只鸟，叫“幺鸡”，别以为是花牌。</p>
+    <h3>筒（圆饼）</h3><div class="row" data-tiles="18-26"></div>
+    <h3>字牌：风和箭</h3><div class="row" data-tiles="27-33"></div>
+    <p class="muted">白板是一块空白（或只有一个框）的牌。四川麻将等玩法不用字牌，只有万条筒 108 张。牌上没有数字时，就数竹子或圆点。</p>
+  </section>
+
+  <section class="card">
+    <span class="step">第 2 步 · 目标</span>
+    <h2>怎样算“胡”</h2>
+    <p>手里凑成 <b class="hl">4 组 + 1 对</b>，一共 14 张，就胡了。</p>
+    <ul class="tight">
+      <li><b>顺子</b>：同一种花色、连着的三张，比如 3-4-5 筒。字牌不能连顺子。</li>
+      <li><b>刻子</b>：三张一模一样，比如 三张东风。</li>
+      <li><b>对子（将）</b>：两张一模一样，整手牌只要一对。</li>
+    </ul>
+    <p>下面这手就是胡牌（绿底是组，红底是将）：</p>
+    <div id="demoWin"></div>
+    <p>还有一种特殊胡法 <b>七对</b>：14 张正好是 7 个对子。大多数玩法都算胡。</p>
+    <div id="demoSeven"></div>
+  </section>
+
+  <section class="card">
+    <span class="step">第 3 步 · 流程</span>
+    <h2>一轮怎么打</h2>
+    <p>四个人，每人先拿 13 张（庄家 14 张）。按逆时针轮流：</p>
+    <ul class="tight">
+      <li><b>轮到你</b>：摸一张 → 凑成胡了就喊 <kbd>自摸</kbd> → 没胡就打出去一张，手里一直保持 13 张。</li>
+      <li><b>别人打出一张</b>，你可以：
+        <ul class="tight">
+          <li>正好让你胡 → 喊 <kbd>胡</kbd>（打出这张的人叫“点炮”）。</li>
+          <li>你手里有一对一样的 → 喊 <kbd>碰</kbd>，拿过来组成刻子摆在桌面上，然后打一张。</li>
+          <li>你手里有三张一样的 → 喊 <kbd>杠</kbd>，四张摆出来，再从后面补摸一张。</li>
+          <li>你<b>上家</b>（左手边的人）打的牌能和你凑成顺子 → 喊 <kbd>吃</kbd>。很多地方（如四川、广东推倒胡）不许吃，先问清楚。</li>
+        </ul>
+      </li>
+      <li>好几个人同时要一张牌：<b>胡 &gt; 碰/杠 &gt; 吃</b>。</li>
+      <li>碰、吃、杠出去的牌摆在面前，不能再换，剩下的手牌继续凑。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <span class="step">第 4 步 · 听牌</span>
+    <h2>差一张就胡：听牌</h2>
+    <p>13 张里已经凑好，只等某一张来就胡，叫“听牌”。常见几种等法：</p>
+    <div id="demoWaits"></div>
+    <p class="muted">能胡的牌种类越多、桌上剩得越多，越容易胡。“助手”页可以帮你算。</p>
+  </section>
+
+  <section class="card">
+    <span class="step">第 5 步 · 打法</span>
+    <h2>新手打牌思路</h2>
+    <ul class="tight">
+      <li><b>先打没用的</b>：单张的字牌（没成对的东南西北中发白）最先打。</li>
+      <li><b>再打边上的孤张</b>：孤零零的 1、9 比 4、5、6 难用。</li>
+      <li><b>留连着的</b>：像 4-5、3-5 这种差一张成顺子的，留着。</li>
+      <li><b>对子留一两个</b>：一个当将，一个等着碰。</li>
+      <li><b>少碰</b>：碰多了手里牌少，后面不好躲。</li>
+      <li><b>别点炮</b>：有人碰了好几次、或者一直不慌不忙地摸牌打牌，他可能听牌了。这时打桌上<b>刚被人打过的同一种牌</b>最安全。</li>
+    </ul>
+  </section>
+</div>
+
+<!-- ================= 助手 ================= -->
+<div class="wrap view" id="v-helper" hidden>
+  <section class="card">
+    <h2>输入你的手牌</h2>
+    <p class="muted">点下面的牌加入手牌，点手牌里的牌移除。只放<b>手里藏着的牌</b>，碰、吃、杠摆出去的不用放。摸牌后（14、11、8 张）会告诉你打哪张；13 张时告诉你听什么。</p>
+    <div class="hand" id="hand"></div>
+    <p class="muted">手牌 <span class="count" id="handCount">0</span> 张</p>
+    <div class="btns">
+      <button class="b" id="btnClear" type="button">清空</button>
+      <button class="b" id="btnUndo" type="button">撤销</button>
+      <button class="b" id="btnDeal" type="button">随机发一手</button>
+      <button class="b" id="btnHonors" type="button" aria-pressed="false">不用字牌</button>
+      <button class="b" id="btnSeven" type="button" aria-pressed="true">七对算胡</button>
+    </div>
+    <div class="palette" id="palette"></div>
+  </section>
+  <section class="card" id="result"></section>
+</div>
+
+<!-- ================= 练习 ================= -->
+<div class="wrap view" id="v-practice" hidden>
+  <section class="card">
+    <h2>练一练</h2>
+    <div class="btns" style="margin-top:0">
+      <button class="b" id="modeWait" type="button" aria-pressed="true">听什么？</button>
+      <button class="b" id="modeDiscard" type="button" aria-pressed="false">打哪张？</button>
+    </div>
+    <p class="score" id="score">答对 0 / 0</p>
+  </section>
+  <section class="card" id="quiz"></section>
+</div>
+
+<!-- ================= 小抄 ================= -->
+<div class="wrap view" id="v-cheat" hidden>
+  <section class="card">
+    <h2>开打前先问朋友</h2>
+    <p class="muted">各地规矩差别很大，问清这几件事，别人就知道你是认真来学的。</p>
+    <div class="checklist">
+      <label><input type="checkbox" id="q1"> 打哪种？四川血战到底、广东推倒胡、国标、长沙、武汉……</label>
+      <label><input type="checkbox" id="q2"> 能不能吃？还是只能碰、杠？</label>
+      <label><input type="checkbox" id="q3"> 有没有字牌、花牌？</label>
+      <label><input type="checkbox" id="q4"> 要不要“缺一门”（只留两种花色才能胡，四川麻将要开局“定缺”）？</label>
+      <label><input type="checkbox" id="q5"> 胡牌有没有最低要求（几番起胡）？七对算不算？</label>
+      <label><input type="checkbox" id="q6"> 点炮谁出钱？自摸怎么算？玩多大？</label>
+      <label><input type="checkbox" id="q7"> 有没有“赖子 / 癞子”（万能牌）？</label>
+    </div>
+  </section>
+  <section class="card">
+    <h2>桌上常听到的词</h2>
+    <dl class="terms">
+      <dt>庄家</dt><dd>本局先出牌的人，开局多拿一张。</dd>
+      <dt>上家 / 下家</dt><dd>左手边 / 右手边的人。只能吃上家的牌。</dd>
+      <dt>摸牌</dt><dd>从牌墙拿一张。</dd>
+      <dt>听牌 / 叫</dt><dd>差一张就胡。“有叫了”就是听牌了。</dd>
+      <dt>自摸</dt><dd>自己摸到胡的牌，通常三家都给钱。</dd>
+      <dt>点炮 / 放炮</dt><dd>你打出去的牌让别人胡了，一般你一个人给。</dd>
+      <dt>将 / 眼</dt><dd>胡牌里那一对。</dd>
+      <dt>明杠 / 暗杠</dt><dd>用别人的牌杠是明杠；自己摸齐四张是暗杠，扣着摆。</dd>
+      <dt>番</dt><dd>牌型的加分，比如清一色、碰碰胡、七对都会翻倍。</dd>
+      <dt>清一色</dt><dd>整手只有一种花色。</dd>
+      <dt>碰碰胡</dt><dd>4 组全是刻子。</dd>
+      <dt>流局 / 荒庄</dt><dd>牌摸完了没人胡。</dd>
+      <dt>现物 / 熟张</dt><dd>桌上已经被打出过的牌，跟着打比较安全。</dd>
+      <dt>生张</dt><dd>桌上还没出现过的牌，打出去更危险。</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>上桌小提醒</h2>
+    <ul class="tight">
+      <li>拿到牌先<b>理牌</b>：按万、条、筒、字分开，从小到大排好，一眼就能看出顺子和对子。</li>
+      <li>不确定能不能胡就先说“等一下”，摊开给大家看，熟人局没人会笑你。</li>
+      <li>手机上打开“助手”页，把手牌点进去，就知道打哪张。牌局里看手机前先跟朋友说一声。</li>
+      <li>刚开始别太在意番数，先能胡牌、少点炮就很好了。</li>
+    </ul>
+  </section>
+</div>
+</main>
+
+<script>
+(() => {
+const NUMS = '一二三四五六七八九';
+const HONOR = ['东','南','西','北','中','发','白'];
+const SUIT = ['万','条','筒'];
+const name = i => i < 27 ? (i % 9 + 1) + SUIT[Math.floor(i / 9)] : (i < 31 ? HONOR[i - 27] + '风' : (i === 31 ? '红中' : i === 32 ? '发财' : '白板'));
+
+/* ---------- tile drawing ---------- */
+const DOTS = {
+  1: [[15,20]], 2: [[15,10],[15,30]], 3: [[7,7],[15,20],[23,33]], 4: [[9,10],[21,10],[9,30],[21,30]],
+  5: [[8,8],[22,8],[15,20],[8,32],[22,32]], 6: [[9,8],[21,8],[9,20],[21,20],[9,32],[21,32]],
+  7: [[6,5],[15,9],[24,13],[9,24],[21,24],[9,34],[21,34]], 8: [[9,5],[21,5],[9,15],[21,15],[9,25],[21,25],[9,35],[21,35]],
+  9: [[7,7],[15,7],[23,7],[7,20],[15,20],[23,20],[7,33],[15,33],[23,33]]
+};
+const STICKS = {
+  2: [[15,10],[15,30]], 3: [[15,10],[9,30],[21,30]], 4: [[9,10],[21,10],[9,30],[21,30]],
+  5: [[8,10],[22,10],[15,20],[8,30],[22,30]], 6: [[6,10],[15,10],[24,10],[6,30],[15,30],[24,30]],
+  7: [[15,6],[6,20],[15,20],[24,20],[6,34],[15,34],[24,34]], 8: [[6,10],[12,10],[18,10],[24,10],[6,30],[12,30],[18,30],[24,30]],
+  9: [[6,7],[15,7],[24,7],[6,20],[15,20],[24,20],[6,33],[15,33],[24,33]]
+};
+const C = { r: 'var(--tile-red)', g: 'var(--tile-green)', b: 'var(--tile-blue)', k: 'var(--tile-ink)' };
+function svg(i) {
+  const s = Math.floor(i / 9), n = i % 9 + 1;
+  let body = '';
+  if (i >= 27) {
+    if (i === 33) body = `<rect x="6" y="8" width="18" height="24" rx="2" fill="none" stroke="${C.b}" stroke-width="2"/>`;
+    else {
+      const col = i === 31 ? C.r : i === 32 ? C.g : C.k;
+      body = `<text x="15" y="28" text-anchor="middle" font-size="22" font-weight="900" fill="${col}" font-family="Noto Serif SC, serif">${HONOR[i-27]}</text>`;
+    }
+  } else if (s === 0) {
+    body = `<text x="15" y="17" text-anchor="middle" font-size="14" font-weight="900" fill="${C.k}" font-family="Noto Serif SC, serif">${NUMS[n-1]}</text>` +
+           `<text x="15" y="36" text-anchor="middle" font-size="15" font-weight="900" fill="${C.r}" font-family="Noto Serif SC, serif">萬</text>`;
+  } else if (s === 2) {
+    const big = n === 1;
+    body = DOTS[n].map(([x, y], k) => {
+      const col = n === 1 ? C.r : (n === 5 && k === 2) || (n === 7 && k < 3) || (n === 3 && k === 1) || (n === 9 && y === 20) || (n === 6 && y > 15) ? C.r : (n === 2 || n === 8 || n === 4) ? (k % 2 ? C.g : C.b) : C.b;
+      const r = big ? 10 : n <= 4 ? 5.2 : 4;
+      return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${col}" stroke-width="${big ? 3 : 1.8}"/><circle cx="${x}" cy="${y}" r="${big ? 4 : 1.6}" fill="${col}"/>`;
+    }).join('');
+  } else {
+    if (n === 1) {
+      body = `<ellipse cx="15" cy="23" rx="8" ry="10" fill="${C.g}"/><circle cx="17" cy="11" r="4.5" fill="${C.g}"/>` +
+             `<path d="M21 10 l5 2 l-5 2z" fill="${C.r}"/><circle cx="18" cy="10" r="1.2" fill="${C.k}"/>` +
+             `<path d="M10 30 l-4 7 M14 31 l-1 7 M19 31 l3 6" stroke="${C.r}" stroke-width="2" fill="none"/>`;
+    } else {
+      body = STICKS[n].map(([x, y], k) => {
+        const col = (n === 5 && k === 2) || (n === 7 && k === 0) || (n === 9 && x === 15) ? C.r : C.g;
+        return `<rect x="${x-1.8}" y="${y-6}" width="3.6" height="12" rx="1.6" fill="${col}"/><rect x="${x-2.4}" y="${y-0.6}" width="4.8" height="1.2" fill="var(--tile-face)"/>`;
+      }).join('');
+    }
+  }
+  return `<svg viewBox="0 0 30 40" aria-hidden="true">${body}</svg>`;
+}
+const idx = i => i < 27 && Math.floor(i / 9) > 0 ? `<span class="ix">${i % 9 + 1}</span>` : '';
+function tileHTML(i, cls = '', tag = 'span', attrs = '') {
+  return `<${tag} class="tile ${cls}" title="${name(i)}" aria-label="${name(i)}" ${attrs}>${svg(i)}${idx(i)}</${tag}>`;
+}
+const row = (arr, cls) => `<div class="row">${arr.map(i => tileHTML(i, cls)).join('')}</div>`;
+
+/* ---------- core analysis ---------- */
+let opt = { honors: true, seven: true };
+const counts = arr => { const c = new Array(34).fill(0); arr.forEach(i => c[i]++); return c; };
+function stdShanten(c, K) {
+  let best = 2 * K;
+  function dfs(i, m, t, p) {
+    while (i < 34 && !c[i]) i++;
+    if (i >= 34) { const tt = Math.min(t, K - m); const s = 2 * (K - m) - tt - p; if (s < best) best = s; return; }
+    const suit = i < 27, pos = i % 9;
+    if (c[i] >= 3 && m < K) { c[i] -= 3; dfs(i, m + 1, t, p); c[i] += 3; }
+    if (suit && pos <= 6 && c[i+1] && c[i+2] && m < K) { c[i]--; c[i+1]--; c[i+2]--; dfs(i, m + 1, t, p); c[i]++; c[i+1]++; c[i+2]++; }
+    if (c[i] >= 2) { c[i] -= 2; if (!p) dfs(i, m, t, 1); if (m + t < K) dfs(i, m, t + 1, p); c[i] += 2; }
+    if (m + t < K) {
+      if (suit && pos <= 7 && c[i+1]) { c[i]--; c[i+1]--; dfs(i, m, t + 1, p); c[i]++; c[i+1]++; }
+      if (suit && pos <= 6 && c[i+2]) { c[i]--; c[i+2]--; dfs(i, m, t + 1, p); c[i]++; c[i+2]++; }
+    }
+    c[i]--; dfs(i, m, t, p); c[i]++;
+  }
+  dfs(0, 0, 0, 0);
+  return best; // -1 = 胡, 0 = 听牌
+}
+function sevenShanten(c) {
+  let pairs = 0, kinds = 0;
+  c.forEach(v => { if (v >= 1) kinds++; if (v >= 2) pairs++; });
+  return 6 - pairs + Math.max(0, 7 - kinds);
+}
+function shanten(c, n) {
+  const K = Math.floor(n / 3);
+  let s = stdShanten(c, K);
+  if (opt.seven && n >= 13) s = Math.min(s, sevenShanten(c));
+  return s;
+}
+const pool = () => opt.honors ? 34 : 27;
+function waits(c, n) { // n % 3 == 1
+  const out = [];
+  for (let x = 0; x < pool(); x++) {
+    if (c[x] >= 4) continue;
+    c[x]++; if (shanten(c, n + 1) === -1) out.push({ t: x, left: 4 - c[x] + 1 }); c[x]--;
+  }
+  return out;
+}
+function discardAdvice(c, n) { // n % 3 == 2
+  const orig = c.slice(), res = [];
+  for (let x = 0; x < 34; x++) {
+    if (!c[x]) continue;
+    c[x]--;
+    const s = shanten(c, n - 1);
+    const acc = []; let total = 0;
+    for (let y = 0; y < pool(); y++) {
+      if (orig[y] >= 4) continue;
+      c[y]++; if (shanten(c, n) < s) { acc.push(y); total += 4 - orig[y]; } c[y]--;
+    }
+    c[x]++;
+    res.push({ t: x, s, acc, total });
+  }
+  res.sort((a, b) => a.s - b.s || b.total - a.total || a.t - b.t);
+  return res;
+}
+function decompose(c) { // returns groups for a complete standard hand, or null
+  const groups = [];
+  function melds(i) {
+    while (i < 34 && !c[i]) i++;
+    if (i >= 34) return true;
+    if (c[i] >= 3) { c[i] -= 3; groups.push([i,i,i]); if (melds(i)) return true; groups.pop(); c[i] += 3; }
+    if (i < 27 && i % 9 <= 6 && c[i+1] && c[i+2]) { c[i]--; c[i+1]--; c[i+2]--; groups.push([i,i+1,i+2]); if (melds(i)) return true; groups.pop(); c[i]++; c[i+1]++; c[i+2]++; }
+    return false;
+  }
+  for (let p = 0; p < 34; p++) {
+    if (c[p] < 2) continue;
+    const save = c.slice(); c[p] -= 2; groups.length = 0;
+    if (melds(0)) { c.splice(0, 34, ...save); return [[p,p], ...groups]; }
+    c.splice(0, 34, ...save);
+  }
+  return null;
+}
+function groupsHTML(gs) {
+  return `<div class="groups">${gs.map(g => `<span class="group ${g.length === 2 ? 'pair' : ''}">${g.map(i => tileHTML(i, 'sm')).join('')}</span>`).join('')}</div>`;
+}
+function winHTML(c) {
+  const gs = decompose(c.slice());
+  if (gs) { const [pair, ...rest] = gs; return groupsHTML([...rest, pair]); }
+  const pairs = []; c.forEach((v, i) => { if (v >= 2) pairs.push([i, i]); });
+  return groupsHTML(pairs) + '<p class="muted">七对子</p>';
+}
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function wall() { const w = []; for (let i = 0; i < pool(); i++) for (let k = 0; k < 4; k++) w.push(i); return shuffle(w); }
+const sort = a => a.slice().sort((x, y) => x - y);
+
+/* ---------- 入门 page ---------- */
+document.querySelectorAll('[data-tiles]').forEach(el => {
+  const [a, b] = el.dataset.tiles.split('-').map(Number);
+  const arr = []; for (let i = a; i <= b; i++) arr.push(i);
+  el.innerHTML = arr.map(i => tileHTML(i, 'lg')).join('');
+});
+document.getElementById('demoWin').innerHTML = groupsHTML([[1,2,3],[13,14,15],[24,24,24],[27,27,27],[22,22]]);
+document.getElementById('demoSeven').innerHTML = groupsHTML([[0,0],[4,4],[10,10],[16,16],[19,19],[25,25],[31,31]]);
+const W = [
+  ['两面', '差一头一尾，听 2 种', [3,4], [2,5]],
+  ['嵌张', '中间缺一张，听 1 种', [12,14], [13]],
+  ['边张', '1-2 只能等 3，听 1 种', [18,19], [20]],
+  ['单钓', '只差一张将，听 1 种', [32], [32]],
+  ['对倒', '两个对子，哪个变刻子都行', [6,6,30,30], [6,30]]
+];
+document.getElementById('demoWaits').innerHTML = W.map(([n, d, have, want]) =>
+  `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0"><span class="chip">${n}</span>${row(have, 'sm')}<span class="muted">等</span>${row(want, 'sm good')}<span class="muted">${d}</span></div>`).join('') +
+  `<p class="muted">上面只画了“还差的那部分”，其他 3 组已经凑好了。</p>`;
+
+/* ---------- 助手 page ---------- */
+let hand = [13,14,1,2,3,19,20,21,22,22,27,27,30,5];
+const history = [];
+const pal = document.getElementById('palette');
+function renderPalette() {
+  const c = counts(hand);
+  const rows = [[0,9],[9,18],[18,27]]; if (opt.honors) rows.push([27,34]);
+  pal.innerHTML = rows.map(([a, b]) => {
+    let h = ''; for (let i = a; i < b; i++) h += tileHTML(i, '', 'button', `type="button" data-add="${i}" ${c[i] >= 4 || hand.length >= 14 ? 'disabled' : ''}`);
+    return `<div class="row">${h}</div>`;
+  }).join('');
+}
+function renderHand() {
+  const el = document.getElementById('hand');
+  el.innerHTML = hand.length ? sort(hand).map(i => tileHTML(i, '', 'button', `type="button" data-del="${i}"`)).join('') : '<span class="empty">还没有牌，点下面的牌加入</span>';
+  document.getElementById('handCount').textContent = hand.length;
+}
+function analyze() {
+  const out = document.getElementById('result');
+  const n = hand.length, c = counts(hand);
+  if (n === 0) { out.innerHTML = '<h2>分析</h2><p class="muted">加入手牌后，这里显示该打哪张、听什么。</p>'; return; }
+  if (n % 3 === 0) {
+    out.innerHTML = `<h2>分析</h2><div class="verdict far"><p>现在是 ${n} 张，数量不对。没碰过牌时应是 <b>13 张</b>（摸牌后 14 张）；每碰/吃/杠一次，手牌少 3 张（10/11、7/8、4/5 张）。</p></div>`;
+    return;
+  }
+  out.innerHTML = '<h2>分析</h2><p class="muted">计算中…</p>';
+  setTimeout(() => {
+    const s = shanten(c, n);
+    let h = '<h2>分析</h2>';
+    if (n % 3 === 2) {
+      if (s === -1) {
+        h += `<div class="verdict win"><div class="big">胡了！喊“胡”或“自摸”</div>${winHTML(c)}</div>`;
+      } else {
+        const adv = discardAdvice(c, n);
+        const best = adv[0];
+        h += `<div class="verdict ${best.s === 0 ? 'ten' : 'far'}"><div class="big">建议打 ${name(best.t)}</div>
+          <div class="row" style="margin:8px 0">${tileHTML(best.t, 'lg on')}</div>
+          <p>${best.s === 0 ? '打掉它就<b>听牌</b>了，' : `打掉后还差 <b>${best.s}</b> 步听牌，`}之后有 <b>${best.acc.length}</b> 种牌能让你前进，桌上最多还剩 <b class="num">${best.total}</b> 张。</p></div>`;
+        h += `<h3>每张牌打出去的结果</h3><div class="scroll"><table class="adv"><tr><th>打</th><th>离听牌</th><th>能前进的牌</th><th class="num">张数</th></tr>` +
+          adv.map((a, k) => `<tr class="${a.s === best.s && a.total === best.total ? 'best' : ''}"><td>${tileHTML(a.t, 'sm')}</td><td class="num">${a.s === 0 ? '<span class="chip">听牌</span>' : a.s + ' 步'}</td><td><div class="row">${a.acc.map(i => tileHTML(i, 'sm')).join('')}</div></td><td class="num">${a.total}</td></tr>`).join('') +
+          `</table></div><p class="muted">“张数”只扣掉了你手里的牌，桌上已打出的牌也要再减掉。</p>`;
+      }
+    } else {
+      if (s === 0) {
+        const w = waits(c, n);
+        const total = w.reduce((a, b) => a + b.left, 0);
+        h += `<div class="verdict ten"><div class="big">听牌了！等这 ${w.length} 种</div>
+          <div class="row" style="margin:8px 0">${w.map(x => tileHTML(x.t, 'lg good')).join('')}</div>
+          <p>最多还剩 <b class="num">${total}</b> 张。别人打出来喊“胡”，自己摸到喊“自摸”。</p></div>`;
+        if (!w.length) h += '<p class="muted">你要的牌已经都在自己手里了，这叫“空听”，最好换一种听法。</p>';
+      } else {
+        h += `<div class="verdict far"><div class="big">还差 ${s} 步听牌</div><p>先摸牌，摸到后把那张也点进来（变成 ${n + 1} 张），这里会告诉你打哪张。</p></div>`;
+      }
+    }
+    out.innerHTML = h;
+  }, 10);
+}
+function refreshHelper() { renderHand(); renderPalette(); analyze(); }
+pal.addEventListener('click', e => {
+  const b = e.target.closest('[data-add]'); if (!b || b.disabled) return;
+  history.push(hand.slice()); hand.push(+b.dataset.add); refreshHelper();
+});
+document.getElementById('hand').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  history.push(hand.slice()); hand.splice(hand.indexOf(+b.dataset.del), 1); refreshHelper();
+});
+document.getElementById('btnClear').onclick = () => { history.push(hand.slice()); hand = []; refreshHelper(); };
+document.getElementById('btnUndo').onclick = () => { if (history.length) { hand = history.pop(); refreshHelper(); } };
+document.getElementById('btnDeal').onclick = () => { history.push(hand.slice()); hand = wall().slice(0, 14); refreshHelper(); };
+function toggle(id, key, invert) {
+  const b = document.getElementById(id);
+  b.onclick = () => {
+    opt[key] = !opt[key];
+    b.setAttribute('aria-pressed', String(invert ? !opt[key] : opt[key]));
+    if (key === 'honors' && !opt.honors) hand = hand.filter(i => i < 27);
+    refreshHelper(); newQuiz();
+  };
+}
+toggle('btnHonors', 'honors', true);
+toggle('btnSeven', 'seven', false);
+
+/* ---------- 练习 page ---------- */
+let mode = 'wait', q = null, right = 0, total = 0;
+function tenpaiHand() {
+  for (;;) {
+    const c = new Array(34).fill(0), tiles = [];
+    let ok = true;
+    for (let g = 0; g < 4 && ok; g++) {
+      let tries = 0, done = false;
+      while (!done && tries++ < 50) {
+        const x = Math.floor(Math.random() * pool());
+        const seq = x < 27 && x % 9 <= 6 && Math.random() < 0.65;
+        const grp = seq ? [x, x+1, x+2] : [x, x, x];
+        const cc = c.slice(); grp.forEach(i => cc[i]++);
+        if (cc.every(v => v <= 4)) { grp.forEach(i => { c[i]++; tiles.push(i); }); done = true; }
+      }
+      ok = done;
+    }
+    if (!ok) continue;
+    const pr = Math.floor(Math.random() * pool());
+    if (c[pr] > 2) continue;
+    c[pr] += 2; tiles.push(pr, pr);
+    tiles.splice(Math.floor(Math.random() * tiles.length), 1);
+    const w = waits(counts(tiles), 13);
+    if (w.length) return { tiles: sort(tiles), w: w.map(x => x.t) };
+  }
+}
+function newQuiz() {
+  if (mode === 'wait') { const h = tenpaiHand(); q = { ...h, pick: new Set(), done: false }; }
+  else {
+    let tiles, c;
+    do { tiles = sort(wall().slice(0, 14)); c = counts(tiles); } while (shanten(c, 14) === -1 || shanten(c, 14) > 3);
+    q = { tiles, adv: discardAdvice(c, 14), done: false };
+  }
+  renderQuiz();
+}
+function renderQuiz() {
+  const el = document.getElementById('quiz');
+  if (mode === 'wait') {
+    const palette = [[0,9],[9,18],[18,27]].concat(opt.honors ? [[27,34]] : []).map(([a, b]) => {
+      let h = ''; for (let i = a; i < b; i++) {
+        let cls = q.pick.has(i) ? 'on' : '';
+        if (q.done) cls = q.w.includes(i) ? 'good' : q.pick.has(i) ? 'on' : '';
+        h += tileHTML(i, cls, 'button', `type="button" data-pick="${i}" ${q.done ? 'disabled style="opacity:1"' : ''}`);
+      }
+      return `<div class="row">${h}</div>`;
+    }).join('');
+    let res = '';
+    if (q.done) {
+      const ok = q.w.length === q.pick.size && q.w.every(i => q.pick.has(i));
+      res = `<div class="verdict ${ok ? 'ten' : 'win'}"><div class="big">${ok ? '答对了' : '差一点'}</div><p>答案（绿框）：${q.w.map(name).join('、')}${ok ? '' : '。红框是你选错的。'}</p>`;
+      const c = counts(q.tiles); c[q.w[0]]++;
+      res += `<p class="muted">比如来一张${name(q.w[0])}：</p>${winHTML(c)}</div>`;
+    }
+    el.innerHTML = `<h2>这手牌听什么？</h2><p class="muted">13 张，已经听牌。把所有能胡的牌都选上。</p>
+      <div class="hand">${q.tiles.map(i => tileHTML(i)).join('')}</div>
+      <div class="palette">${palette}</div>${res}
+      <div class="btns">${q.done ? '<button class="b primary" type="button" data-next>下一题</button>' : '<button class="b primary" type="button" data-check>提交</button>'}</div>`;
+  } else {
+    const best = q.adv[0];
+    let res = '';
+    if (q.done) {
+      const mine = q.adv.find(a => a.t === q.ans);
+      const ok = mine.s === best.s && mine.total === best.total;
+      const okish = !ok && mine.s === best.s;
+      res = `<div class="verdict ${ok ? 'ten' : okish ? 'far' : 'win'}"><div class="big">${ok ? '最好的选择' : okish ? '可以，但还有更好的' : '不太好'}</div>
+        <p>你打 ${name(q.ans)}：${mine.s === 0 ? '听牌' : '离听牌 ' + mine.s + ' 步'}，能前进的牌 ${mine.total} 张。</p>
+        ${ok ? '' : `<p>打 ${name(best.t)}：${best.s === 0 ? '听牌' : '离听牌 ' + best.s + ' 步'}，能前进的牌 ${best.total} 张。</p>`}
+        <p class="muted">${best.s < mine.s ? '你打掉的牌拆了已经有用的搭子。' : ok ? '' : '两种打法一样快，但另一种等的牌更多。'}</p></div>`;
+    }
+    el.innerHTML = `<h2>摸到第 14 张，打哪张？</h2><p class="muted">点一张打出去。目标是离听牌最近、等的牌最多。</p>
+      <div class="hand">${q.tiles.map(i => tileHTML(i, q.done && i === best.t ? 'good raise' : q.done && i === q.ans ? 'on' : '', 'button', `type="button" data-out="${i}" ${q.done ? 'disabled style="opacity:1"' : ''}`)).join('')}</div>
+      ${res}<div class="btns">${q.done ? '<button class="b primary" type="button" data-next>下一题</button>' : ''}</div>`;
+  }
+  document.getElementById('score').textContent = `答对 ${right} / ${total}`;
+}
+document.getElementById('quiz').addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('[data-next]')) { newQuiz(); return; }
+  if (q.done) return;
+  const p = t.closest('[data-pick]');
+  if (p) { const i = +p.dataset.pick; q.pick.has(i) ? q.pick.delete(i) : q.pick.add(i); renderQuiz(); return; }
+  if (t.closest('[data-check]')) {
+    if (!q.pick.size) return;
+    q.done = true; total++;
+    if (q.w.length === q.pick.size && q.w.every(i => q.pick.has(i))) right++;
+    renderQuiz(); return;
+  }
+  const o = t.closest('[data-out]');
+  if (o) {
+    q.ans = +o.dataset.out; q.done = true; total++;
+    const mine = q.adv.find(a => a.t === q.ans), best = q.adv[0];
+    if (mine.s === best.s && mine.total === best.total) right++;
+    renderQuiz();
+  }
+});
+const mW = document.getElementById('modeWait'), mD = document.getElementById('modeDiscard');
+mW.onclick = () => { mode = 'wait'; mW.setAttribute('aria-pressed', 'true'); mD.setAttribute('aria-pressed', 'false'); newQuiz(); };
+mD.onclick = () => { mode = 'discard'; mD.setAttribute('aria-pressed', 'true'); mW.setAttribute('aria-pressed', 'false'); newQuiz(); };
+
+/* ---------- routing ---------- */
+const VIEWS = ['learn', 'helper', 'practice', 'cheat'];
+function route() {
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'learn';
+  VIEWS.forEach(x => { document.getElementById('v-' + x).hidden = x !== v; });
+  document.querySelectorAll('nav a').forEach(a => { if (a.dataset.v === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+/* checklist memory (per device convenience) */
+document.querySelectorAll('.checklist input').forEach(cb => {
+  try { cb.checked = localStorage.getItem('mj-' + cb.id) === '1'; } catch (e) {}
+  cb.addEventListener('change', () => { try { localStorage.setItem('mj-' + cb.id, cb.checked ? '1' : '0'); } catch (e) {} });
+});
+
+route();
+refreshHelper();
+newQuiz();
+})();
+</script>
